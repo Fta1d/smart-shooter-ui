@@ -3,31 +3,74 @@
 void MainWindow::initMainWindow() {
     centralWidget = new QWidget(this);
 
-    setupTopLayout();
+    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
 
+    QWidget *topWidget = new QWidget();
+    QWidget *bottomWidget = new QWidget();
+    
+    setupTopLayout(topWidget);
+
+    setupBottomLayout(bottomWidget);
+
+    mainLayout->addWidget(topWidget, 1); 
+    mainLayout->addWidget(bottomWidget, 2); 
 
     connectSignalsAndSlots();
     setCentralWidget(centralWidget);
 }
 
-void MainWindow::setupTopLayout() {
-    QHBoxLayout *topLayout = new QHBoxLayout(centralWidget);
+void MainWindow::setupTopLayout(QWidget *parent) {
+    QHBoxLayout *topLayout = new QHBoxLayout(parent);
 
+    label->vidStreamLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     topLayout->addWidget(label->vidStreamLabel);
     
-    QVBoxLayout *slidersLayout = new QVBoxLayout();
+    QVBoxLayout *verticalRight = new QVBoxLayout();
+    verticalRight->addLayout(createXSliderLayout());
+    verticalRight->addLayout(createYSliderLayout());
+    verticalRight->addLayout(createStateButtonLayout());
+    verticalRight->addStretch();
+    verticalRight->addLayout(createConnectionLayout());
     
-    slidersLayout->addLayout(createXSliderLayout());
-    slidersLayout->addLayout(createYSliderLayout());
-    
-    slidersLayout->addStretch();
-    
-    topLayout->addLayout(slidersLayout);
-
+    topLayout->addLayout(verticalRight, 1);
 }
 
-void MainWindow::setupBottomLayout() {
+void MainWindow::setupBottomLayout(QWidget *parent) {
+    QHBoxLayout *bottomLayout = new QHBoxLayout(parent);
+    initializeLogWidget();
+    bottomLayout->addWidget(log);
+}
+
+QHBoxLayout* MainWindow::createStateButtonLayout() {
+    QHBoxLayout *stateButtonLayout = new QHBoxLayout();
+
+    initializeButtons();
+
+    stateButtonLayout->addWidget(activeButton);
+
+    return stateButtonLayout;
+}
+
+QHBoxLayout* MainWindow::createConnectionLayout() {
+    QVBoxLayout *connectionLayout = new QVBoxLayout();
+
+    addressLineEdit = new QLineEdit();
+    addressLineEdit->setPlaceholderText("Enter address");
+
+    QRegularExpression regExp("^[0-9.:]+$");
+    QRegularExpressionValidator *validator = new QRegularExpressionValidator(regExp, this);
+    addressLineEdit->setValidator(validator);
+
+    connectButton = new QPushButton("Connect");
+
+    connectionLayout->addWidget(new QLabel("Address:"));
+    connectionLayout->addWidget(addressLineEdit);
+    connectionLayout->addWidget(connectButton);
     
+    QHBoxLayout *wrapperLayout = new QHBoxLayout();
+    wrapperLayout->addLayout(connectionLayout);
+    
+    return wrapperLayout;
 }
 
 QHBoxLayout* MainWindow::createXSliderLayout() {
@@ -66,6 +109,17 @@ QHBoxLayout* MainWindow::createYSliderLayout() {
     return yLayout;
 }
 
+void MainWindow::initializeLogWidget() {
+    log = new QPlainTextEdit();
+    log->setReadOnly(true);
+    log->setPlaceholderText("Event log...");
+}
+
+void MainWindow::initializeButtons() {
+    activeButton = new QPushButton("Activate", this);
+    activeButton->setCheckable(true);
+}
+
 void MainWindow::initializeSlider(QSlider *slider) {
     slider->setMinimum(0);
     slider->setMaximum(100);
@@ -83,6 +137,8 @@ void MainWindow::connectSignalsAndSlots() {
     connect(xLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateXSlider);
     connect(ySlider, &QSlider::valueChanged, this, &MainWindow::updateYLineEdit);
     connect(yLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateYSlider);
+    connect(activeButton, &QPushButton::clicked, this, &MainWindow::stateButtonClicked);
+    connect(connectButton, &QPushButton::clicked, this, &MainWindow::connectButtonClicked);
 }
 
 void MainWindow::updateXLineEdit() {
@@ -101,13 +157,38 @@ void MainWindow::updateYSlider() {
     ySlider->setValue(yLineEdit->text().toInt());
 }
 
+void MainWindow::stateButtonClicked(bool checked) {
+    QMutexLocker locker(&log_mutex);
+
+    if (checked) {
+        log->appendPlainText("State: activated");
+    } else {
+        log->appendPlainText("State: deactivated");
+    }
+    
+}
+
+void MainWindow::connectButtonClicked() {
+    QMutexLocker locker(&log_mutex);
+    QString address = addressLineEdit->text();
+    
+    if (!address.isEmpty()) {
+        log->appendPlainText("Connecting to: " + address);
+        // Connection code here
+    } else {
+        log->appendPlainText("Error: Address field is empty");
+    }
+}
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     xSlider = nullptr;
     ySlider = nullptr;
     xLineEdit = nullptr;
     yLineEdit = nullptr;
+    addressLineEdit = nullptr;
+    connectButton = nullptr;
 
-    resize(800, 600);
+    resize(1000, 600);
     label = new VideoLabel();
 }
 
