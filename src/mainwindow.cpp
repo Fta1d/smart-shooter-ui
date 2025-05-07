@@ -1,4 +1,5 @@
 #include "inc/mainwindow.h"
+#include "inc/udpcommandsender.h"  // Include UdpCmdSender
 
 void MainWindow::initMainWindow() {
     centralWidget = new QWidget(this);
@@ -49,6 +50,7 @@ QHBoxLayout* MainWindow::createStateButtonLayout() {
     initializeButtons();
 
     stateButtonLayout->addWidget(activeButton);
+    stateButtonLayout->addWidget(shotButton);
 
     return stateButtonLayout;
 }
@@ -58,6 +60,7 @@ QHBoxLayout* MainWindow::createConnectionLayout() {
 
     addressLineEdit = new QLineEdit();
     addressLineEdit->setPlaceholderText("Enter address");
+    addressLineEdit->setText("127.0.0.1"); // Default to localhost
 
     QRegularExpression regExp("^[0-9.:]+$");
     QRegularExpressionValidator *validator = new QRegularExpressionValidator(regExp, this);
@@ -120,6 +123,9 @@ void MainWindow::initializeLogWidget() {
 void MainWindow::initializeButtons() {
     activeButton = new QPushButton("Activate", this);
     activeButton->setCheckable(true);
+    
+    shotButton = new QPushButton("Shot", this);
+    shotButton->setCheckable(false);
 }
 
 void MainWindow::initializeSlider(QSlider *slider) {
@@ -135,12 +141,43 @@ void MainWindow::initializeLineEdit(QLineEdit *lineEdit) {
 }
 
 void MainWindow::connectSignalsAndSlots() {
+    // Connect sliders and line edits for UI updates
     connect(xSlider, &QSlider::valueChanged, this, &MainWindow::updateXLineEdit);
     connect(xLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateXSlider);
     connect(ySlider, &QSlider::valueChanged, this, &MainWindow::updateYLineEdit);
     connect(yLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateYSlider);
+    
+    // Connect buttons
     connect(activeButton, &QPushButton::clicked, this, &MainWindow::stateButtonClicked);
+    connect(shotButton, &QPushButton::clicked, this, &MainWindow::shotButtonClicked);
     connect(connectButton, &QPushButton::clicked, this, &MainWindow::connectButtonClicked);
+    
+    // Connect signal values to cache them locally
+    connect(xSlider, &QSlider::valueChanged, [this](int value) {
+        currentXValue = value;
+        emit updateXValue(value);
+    });
+    
+    connect(ySlider, &QSlider::valueChanged, [this](int value) {
+        currentYValue = value;
+        emit updateYValue(value);
+    });
+}
+
+void MainWindow::setUdpCmdSender(UdpCmdSender *sender) {
+    cmdSender = sender;
+    
+    // Connect UdpCmdSender signals to MainWindow slots
+    connect(cmdSender, &UdpCmdSender::messageSent, this, &MainWindow::logMessage, Qt::QueuedConnection);
+    connect(cmdSender, &UdpCmdSender::errorOccurred, this, &MainWindow::logError, Qt::QueuedConnection);
+    
+    // Connect MainWindow signals to UdpCmdSender slots
+    connect(this, &MainWindow::startUdpSending, cmdSender, &UdpCmdSender::startSending, Qt::QueuedConnection);
+    connect(this, &MainWindow::stopUdpSending, cmdSender, &UdpCmdSender::stopSending, Qt::QueuedConnection);
+    connect(this, &MainWindow::updateXValue, cmdSender, &UdpCmdSender::setXValue, Qt::QueuedConnection);
+    connect(this, &MainWindow::updateYValue, cmdSender, &UdpCmdSender::setYValue, Qt::QueuedConnection);
+    connect(this, &MainWindow::updateShotValue, cmdSender, &UdpCmdSender::setShotValue, Qt::QueuedConnection);
+    connect(this, &MainWindow::updateActiveValue, cmdSender, &UdpCmdSender::setActiveValue, Qt::QueuedConnection);
 }
 
 void MainWindow::updateXLineEdit() {
@@ -162,12 +199,32 @@ void MainWindow::updateYSlider() {
 void MainWindow::stateButtonClicked(bool checked) {
     QMutexLocker locker(&log_mutex);
 
+    // Update active state
+    currentActiveValue = checked;
+    emit updateActiveValue(checked);
+    
     if (checked) {
         log->appendPlainText("State: activated");
     } else {
         log->appendPlainText("State: deactivated");
     }
+}
+
+void MainWindow::shotButtonClicked() {
+    QMutexLocker locker(&log_mutex);
     
+    // Set shot value to true
+    currentShotValue = true;
+    emit updateShotValue(true);
+    log->appendPlainText("Shot fired!");
+    
+    // Reset shot value to false after a short delay
+    QTimer::singleShot(10, [this]() {
+        currentShotValue = false;
+        emit updateShotValue(false);
+        QMutexLocker locker(&log_mutex);
+        log->appendPlainText("Shot reset");
+    });
 }
 
 void MainWindow::connectButtonClicked() {
@@ -175,22 +232,48 @@ void MainWindow::connectButtonClicked() {
     QString address = addressLineEdit->text();
     
     if (!address.isEmpty()) {
-        if (gstRunning) {
-            log->appendPlainText("Already connected!");
+        if (udpConnected) {
+            log->appendPlainText("UDP already connected!");
             return;
         }
 
-        log->appendPlainText("Connecting to: " + address);
-        gstRunning = true;
-        emit startGstProcess();
+        log->appendPlainText("Connecting UDP to: " + address);
+        
+        // Set destination and start sending
+        emit startUdpSending(address, 5050);
+        
+        udpConnected = true;
+        
+        // Start GStreamer if not already running
+        if (!gstRunning) {
+            log->appendPlainText("Starting video stream from: " + address);
+            gstRunning = true;
+            emit startGstProcess();
+        }
     } else {
         log->appendPlainText("Error: Address field is empty");
     }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
+    // Stop UDP sending
+    if (udpConnected) {
+        emit stopUdpSending();
+    }
+    
     emit windowClosed();
     QMainWindow::closeEvent(event);
+}
+
+// UdpCmdSender log slots
+void MainWindow::logMessage(const QString &message) {
+    QMutexLocker locker(&log_mutex);
+    log->appendPlainText(message);
+}
+
+void MainWindow::logError(const QString &errorMessage) {
+    QMutexLocker locker(&log_mutex);
+    log->appendPlainText("ERROR: " + errorMessage);
 }
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
@@ -200,11 +283,21 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     yLineEdit = nullptr;
     addressLineEdit = nullptr;
     connectButton = nullptr;
+    shotButton = nullptr;
     gstRunning = false;
+    udpConnected = false;
+    cmdSender = nullptr;
+    
+    // Initialize current values
+    currentXValue = 0;
+    currentYValue = 0;
+    currentShotValue = false;
+    currentActiveValue = false;
 
     resize(1000, 600);
     label = new VideoLabel();
 }
 
 MainWindow::~MainWindow() {
+    // cmdSender is not owned by MainWindow, so we don't delete it here
 }

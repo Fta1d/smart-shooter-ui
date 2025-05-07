@@ -11,6 +11,9 @@
 
 #include "inc/videolabel.h"
 
+// Forward declaration
+class UdpCmdSender;
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -30,6 +33,7 @@ class MainWindow : public QMainWindow {
 
         QPlainTextEdit *log;
         QPushButton *activeButton;
+        QPushButton *shotButton;
         QSlider *xSlider;
         QSlider *ySlider;
         QLineEdit *xLineEdit;
@@ -39,18 +43,39 @@ class MainWindow : public QMainWindow {
         QPushButton *connectButton;
 
         bool gstRunning;
+        bool udpConnected;
+        
+        // UdpCmdSender pointer - not owned by MainWindow
+        UdpCmdSender *cmdSender;
         
         mutable QMutex log_mutex;
+        
+        // Current values
+        int currentXValue;
+        int currentYValue;
+        bool currentShotValue;
+        bool currentActiveValue;
 
     public:
         VideoLabel *label;
 
         MainWindow(QWidget *parent = nullptr);
         ~MainWindow();
+        
+        // Set the UdpCmdSender from AppController
+        void setUdpCmdSender(UdpCmdSender *sender);
 
     signals:
         void startGstProcess();
         void windowClosed();    
+        
+        // New signals for UdpCmdSender
+        void startUdpSending(const QString &address, quint16 port);
+        void stopUdpSending();
+        void updateXValue(int value);
+        void updateYValue(int value);
+        void updateShotValue(bool value);
+        void updateActiveValue(bool value);
 
     public slots:
         void initMainWindow();
@@ -61,6 +86,11 @@ class MainWindow : public QMainWindow {
         void updateYLineEdit();
         void updateYSlider();
         void stateButtonClicked(bool checked);
+        void shotButtonClicked();
         void connectButtonClicked();
         void closeEvent(QCloseEvent *event);
+        
+        // New slots for command sender
+        void logMessage(const QString &message);
+        void logError(const QString &errorMessage);
 };

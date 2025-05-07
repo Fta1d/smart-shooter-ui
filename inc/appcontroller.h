@@ -6,20 +6,29 @@
 
 #include "inc/gstcontrol.h"
 #include "inc/mainwindow.h"
+#include "inc/udpcommandsender.h"
 
 class AppController : public QObject {
     Q_OBJECT
 
     private:
         GstControl *gst;
+        UdpCmdSender *cmdSender;  // Added UdpCmdSender
         MainWindow *window;
         QThread gstThread;
+        QThread cmdSenderThread;  // Added thread for UdpCmdSender
 
     public slots:
         void stopGstreamer() {
             if (gst && gst->isRunning()) {
                 gst->stopPipeline();
             }
+            
+            // Stop the command sender before quitting
+            if (cmdSender) {
+                cmdSender->stopSending();
+            }
+            
             qApp->quit();
         }
         
