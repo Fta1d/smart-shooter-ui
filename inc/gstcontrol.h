@@ -7,8 +7,22 @@
 
 #include <QObject>
 
-class GstControl {
+struct CallbackData {
+    GMainLoop *main_loop;
+    std::function<void(GstSample*)> sample_handler;
+};
+
+class GstControl : public QObject {
     Q_OBJECT
+
+    public slots:
+        gboolean startPipeline();
+        void connectToStream();
+        void stopPipeline();
+        bool isRunning() const { return running; }
+
+    signals:
+        void pipelineReady();
 
     private:
         GstElement* pipeline;
@@ -17,15 +31,18 @@ class GstControl {
         GstElement* depayloader;
         GstElement* decoder;
         GstElement* sink;
-        static GMainLoop *loop;
+        GMainLoop *loop;
 
         gboolean initPipeline();
-        gboolean startPipeline();
+
+        struct CallbackData callback_data;
         
         static GstFlowReturn new_sample(GstAppSink *sink, gpointer data);
+        GstFlowReturn procesSample(GstSample *sample);
 
+        bool running;
     public:
-        void connectToStream();
+        
 
         GstControl();
         ~GstControl();

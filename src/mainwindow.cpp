@@ -17,6 +17,8 @@ void MainWindow::initMainWindow() {
 
     connectSignalsAndSlots();
     setCentralWidget(centralWidget);
+
+    show();
 }
 
 void MainWindow::setupTopLayout(QWidget *parent) {
@@ -178,6 +180,11 @@ void MainWindow::connectButtonClicked() {
     } else {
         log->appendPlainText("Error: Address field is empty");
     }
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+    emit windowClosed();
+    QMainWindow::closeEvent(event);
 }
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {

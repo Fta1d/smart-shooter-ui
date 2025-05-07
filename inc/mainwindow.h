@@ -41,12 +41,16 @@ class MainWindow : public QMainWindow {
         mutable QMutex log_mutex;
 
     public:
-        void initMainWindow();
-
         VideoLabel *label;
 
         MainWindow(QWidget *parent = nullptr);
         ~MainWindow();
+
+    signals:
+        void windowClosed();    
+
+    public slots:
+        void initMainWindow();
 
     private slots:
         void updateXLineEdit();
@@ -55,5 +59,5 @@ class MainWindow : public QMainWindow {
         void updateYSlider();
         void stateButtonClicked(bool checked);
         void connectButtonClicked();
+        void closeEvent(QCloseEvent *event);
 };
-
