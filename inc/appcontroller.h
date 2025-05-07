@@ -22,9 +22,7 @@ class AppController : public QObject {
             }
             qApp->quit();
         }
-
-    signals:
-        void startGstreamerProcess();
+        
     public:
         void run();
 

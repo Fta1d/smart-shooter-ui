@@ -3,9 +3,14 @@
 
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
-#include <gst/app/gstappsrc.h>
+#include <gst/video/video.h>
 
 #include <QObject>
+#include <QMutexLocker>
+#include <QMutex>
+#include <QPixmap>
+#include <QImage>
+#include <QDebug>
 
 struct CallbackData {
     GMainLoop *main_loop;
@@ -22,7 +27,7 @@ class GstControl : public QObject {
         bool isRunning() const { return running; }
 
     signals:
-        void pipelineReady();
+        void frameReady();
 
     private:
         GstElement* pipeline;
@@ -31,7 +36,7 @@ class GstControl : public QObject {
         GstElement* depayloader;
         GstElement* decoder;
         GstElement* sink;
-        GMainLoop *loop;
+        GMainLoop*  loop;
 
         gboolean initPipeline();
 
@@ -41,8 +46,12 @@ class GstControl : public QObject {
         GstFlowReturn procesSample(GstSample *sample);
 
         bool running;
+
+        QMutex imageMutex;
+
+        QPixmap framePixmap;
     public:
-        
+        QPixmap getFramePixmap();
 
         GstControl();
         ~GstControl();

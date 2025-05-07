@@ -175,8 +175,14 @@ void MainWindow::connectButtonClicked() {
     QString address = addressLineEdit->text();
     
     if (!address.isEmpty()) {
+        if (gstRunning) {
+            log->appendPlainText("Already connected!");
+            return;
+        }
+
         log->appendPlainText("Connecting to: " + address);
-        // Connection code here
+        gstRunning = true;
+        emit startGstProcess();
     } else {
         log->appendPlainText("Error: Address field is empty");
     }
@@ -194,6 +200,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     yLineEdit = nullptr;
     addressLineEdit = nullptr;
     connectButton = nullptr;
+    gstRunning = false;
 
     resize(1000, 600);
     label = new VideoLabel();

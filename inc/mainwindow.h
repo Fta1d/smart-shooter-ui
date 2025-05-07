@@ -37,6 +37,8 @@ class MainWindow : public QMainWindow {
         QWidget *centralWidget;
         QLineEdit *addressLineEdit;
         QPushButton *connectButton;
+
+        bool gstRunning;
         
         mutable QMutex log_mutex;
 
@@ -47,6 +49,7 @@ class MainWindow : public QMainWindow {
         ~MainWindow();
 
     signals:
+        void startGstProcess();
         void windowClosed();    
 
     public slots:

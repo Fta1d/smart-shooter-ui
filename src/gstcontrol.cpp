@@ -1,21 +1,100 @@
 #include "inc/gstcontrol.h"
 
-
+static gboolean bus_callback(GstBus *bus, GstMessage *message, gpointer data) {
+    GstControl *control = static_cast<GstControl*>(data);
+    
+    switch (GST_MESSAGE_TYPE(message)) {
+        case GST_MESSAGE_ERROR: {
+            GError *err;
+            gchar *debug;
+            gst_message_parse_error(message, &err, &debug);
+            qDebug() << "Error:" << err->message;
+            qDebug() << "Debug:" << debug;
+            g_error_free(err);
+            g_free(debug);
+            break;
+        }
+        case GST_MESSAGE_WARNING: {
+            GError *err;
+            gchar *debug;
+            gst_message_parse_warning(message, &err, &debug);
+            qDebug() << "Warning:" << err->message;
+            qDebug() << "Debug:" << debug;
+            g_error_free(err);
+            g_free(debug);
+            break;
+        }
+        case GST_MESSAGE_INFO: {
+            GError *err;
+            gchar *debug;
+            gst_message_parse_info(message, &err, &debug);
+            qDebug() << "Info:" << err->message;
+            qDebug() << "Debug:" << debug;
+            g_error_free(err);
+            g_free(debug);
+            break;
+        }
+        case GST_MESSAGE_EOS:
+            qDebug() << "End of stream";
+            break;
+        default:
+            break;
+    }
+    
+    return TRUE;
+}
 
 gboolean GstControl::initPipeline() {
+    // GstBus *bus;
+
+    // g_print("Initializing webcam pipeline...\n");
+
+    // pipeline = gst_pipeline_new("webcam-pipeline");
+    // source = gst_element_factory_make("v4l2src", "webcam-source");  // v4l2src для Linux
+    // converter = gst_element_factory_make("videoconvert", "converter");
+    // sink = gst_element_factory_make("appsink", "video-output");
+
+    // if (!pipeline || !source || !converter || !sink) {
+    //     g_printerr("Could not create webcam pipeline elements.\n");
+    //     return -1;
+    // }
+
+    // // Налаштування для веб-камери
+    // // Можете змінити розширення і частоту кадрів, якщо потрібно
+    // g_object_set(G_OBJECT(source), "device", "/dev/video0", NULL);
+
+    // // Налаштування для appsink
+    // g_object_set(G_OBJECT(sink), "emit-signals", TRUE, NULL);
+    // GstCaps *caps = gst_caps_from_string("video/x-raw, format=(string)RGB, width=640, height=480, framerate=30/1");
+    // g_object_set(G_OBJECT(sink), "caps", caps, NULL);
+    // gst_caps_unref(caps);
+    // g_signal_connect(sink, "new-sample", G_CALLBACK(new_sample), &callback_data);
+
+    // gst_bin_add_many(GST_BIN(pipeline), source, converter, sink, NULL);
+
+    // if (!gst_element_link_many(source, converter, sink, NULL)) {
+    //     g_printerr("Webcam pipeline elements cannot be linked!\n");
+    //     gst_object_unref(GST_OBJECT(pipeline));
+    //     return -1;
+    // }
+
+    // bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
+    // gst_bus_add_watch(bus, NULL /*bus callback here*/, NULL);
+    // gst_object_unref(bus);
+
+
     GstBus *bus;
     GstCaps *caps;
-
-    g_print("Debug... 1\n");
 
     pipeline = gst_pipeline_new("udp-video-pipeline");
     source = gst_element_factory_make("udpsrc", "udp-source");
     depayloader = gst_element_factory_make("rtph264depay", "depayloader");
     decoder = gst_element_factory_make("avdec_h264", "decoder");
     converter = gst_element_factory_make("videoconvert", "converter");
+    GstElement *capsfilter = gst_element_factory_make("capsfilter", "format-filter");
     sink = gst_element_factory_make("appsink", "video-output");
 
-    if (!pipeline || !source || !depayloader || !decoder || !converter || !sink) {
+    if (!pipeline || !source || !depayloader || !decoder || !converter || !capsfilter || !sink) {
         g_printerr("Could not create pipeline element.\n");
         return -1;
     }
@@ -26,19 +105,28 @@ gboolean GstControl::initPipeline() {
     g_object_set(G_OBJECT(source), "caps", caps, NULL);
     gst_caps_unref(caps);
 
+    caps = gst_caps_from_string("video/x-raw, format=(string)RGB");
+    g_object_set(G_OBJECT(capsfilter), "caps", caps, NULL);
+    gst_caps_unref(caps);
+
     g_object_set(G_OBJECT(sink), "emit-signals", TRUE, NULL);
+
+    caps = gst_caps_from_string("video/x-raw, format=(string)RGB");
+    g_object_set(G_OBJECT(sink), "caps", caps, NULL);
+    gst_caps_unref(caps);
+    
     g_signal_connect(sink, "new-sample", G_CALLBACK(new_sample), &callback_data);
 
-    gst_bin_add_many(GST_BIN(pipeline), source, depayloader, decoder, converter, sink, NULL);
+    gst_bin_add_many(GST_BIN(pipeline), source, depayloader, decoder, converter, capsfilter, sink, NULL);
 
-    if (!gst_element_link_many(source, depayloader, decoder, converter, sink, NULL)) {
+    if (!gst_element_link_many(source, depayloader, decoder, converter, capsfilter, sink, NULL)) {
         g_printerr("Pipeline elements cannot be linked!\n");
         gst_object_unref(GST_OBJECT(pipeline));
         return -1;
     }
 
     bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
-    gst_bus_add_watch(bus, NULL /*bus callback here*/, NULL);
+    gst_bus_add_watch(bus, bus_callback, NULL);
     gst_object_unref(bus);
 
     return 1;
@@ -80,18 +168,71 @@ GstFlowReturn GstControl::new_sample(GstAppSink *sink, gpointer data) {
 }
 
 GstFlowReturn GstControl::procesSample(GstSample *sample) {
+    QMutexLocker locker(&imageMutex);
+
     GstBuffer *buffer;
     GstMapInfo map;
 
-    // sample = gst_app_sink_pull_sample(sink);
-
     if (sample) {
         buffer = gst_sample_get_buffer(sample);
+        GstCaps *caps = gst_sample_get_caps(sample);
+        if (!caps) {
+            gst_sample_unref(sample);
+            return GST_FLOW_ERROR;
+        }
+
+        GstVideoInfo video_info;
+        gst_video_info_init(&video_info);
+        if (!gst_video_info_from_caps(&video_info, caps)) {
+            gst_sample_unref(sample);
+            return GST_FLOW_ERROR;
+        }
 
         if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
+            QImage::Format format;
+            switch (GST_VIDEO_INFO_FORMAT(&video_info)) {
+                case GST_VIDEO_FORMAT_RGB:
+                    format = QImage::Format_RGB888;
+                    break;
+                case GST_VIDEO_FORMAT_RGBA:
+                    format = QImage::Format_RGBA8888;
+                    break;
+                case GST_VIDEO_FORMAT_BGRA:
+                    format = QImage::Format_ARGB32;
+                    break;
+                case GST_VIDEO_FORMAT_BGR:
+                    format = QImage::Format_RGB888;
+                    break;
+                default:
+                    g_printerr("Wrong video format!\n");
+                    gst_buffer_unmap(buffer, &map);
+                    gst_sample_unref(sample);
+                    return GST_FLOW_ERROR;
+            }
 
+            QImage image(
+                map.data,
+                GST_VIDEO_INFO_WIDTH(&video_info),
+                GST_VIDEO_INFO_HEIGHT(&video_info),
+                GST_VIDEO_INFO_PLANE_STRIDE(&video_info, 0),
+                format
+            );
+
+            if (GST_VIDEO_INFO_FORMAT(&video_info) == GST_VIDEO_FORMAT_BGR) {
+                image = image.rgbSwapped();
+            }
+
+            QImage imageCopy = image.copy();
 
             gst_buffer_unmap(buffer, &map);
+
+            framePixmap = QPixmap::fromImage(imageCopy);
+
+
+            emit frameReady();
+
+            gst_sample_unref(sample);
+            return GST_FLOW_OK;
         }
 
         gst_sample_unref(sample);
@@ -106,8 +247,6 @@ void GstControl::connectToStream() {
 
     initPipeline();
     startPipeline();
-
-    
 }
 
 
@@ -131,12 +270,18 @@ GstControl::GstControl() {
 
     callback_data.main_loop = nullptr;
         
-        callback_data.sample_handler = [this](GstSample *sample) {
-            this->procesSample(sample);
-        };
+    callback_data.sample_handler = [this](GstSample *sample) {
+        this->procesSample(sample);
+    };
+
     g_print("Initializzed gst!\n");
 }
 
 GstControl::~GstControl() {
 
+}
+
+QPixmap GstControl::getFramePixmap() {
+    QMutexLocker locker(&imageMutex);
+    return framePixmap;
 }
