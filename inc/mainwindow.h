@@ -27,7 +27,8 @@ class MainWindow : public QMainWindow {
         QHBoxLayout* createConnectionLayout();
         void initializeLogWidget();
         void initializeButtons();
-        void initializeSlider(QSlider *slider);
+        void initializeXSlider(QSlider *slider);
+        void initializeYSlider(QSlider *slider);
         void initializeLineEdit(QLineEdit *lineEdit);
         void connectSignalsAndSlots();
 

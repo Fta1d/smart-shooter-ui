@@ -82,7 +82,7 @@ QHBoxLayout* MainWindow::createXSliderLayout() {
     QHBoxLayout *xLayout = new QHBoxLayout();
     
     xSlider = new QSlider(Qt::Horizontal);
-    initializeSlider(xSlider);
+    initializeXSlider(xSlider);
     
     xLineEdit = new QLineEdit();
     initializeLineEdit(xLineEdit);
@@ -100,7 +100,7 @@ QHBoxLayout* MainWindow::createYSliderLayout() {
     QHBoxLayout *yLayout = new QHBoxLayout();
 
     ySlider = new QSlider(Qt::Horizontal);
-    initializeSlider(ySlider);
+    initializeYSlider(ySlider);
 
     yLineEdit = new QLineEdit();
     initializeLineEdit(yLineEdit);
@@ -128,9 +128,15 @@ void MainWindow::initializeButtons() {
     shotButton->setCheckable(false);
 }
 
-void MainWindow::initializeSlider(QSlider *slider) {
+void MainWindow::initializeXSlider(QSlider *slider) {
     slider->setMinimum(0);
-    slider->setMaximum(100);
+    slider->setMaximum(label->width());
+    slider->setValue(0); 
+}
+
+void MainWindow::initializeYSlider(QSlider *slider) {
+    slider->setMinimum(0);
+    slider->setMaximum(label->height());
     slider->setValue(0); 
 }
 
