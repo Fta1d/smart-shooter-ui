@@ -24,6 +24,7 @@ void MainWindow::initMainWindow() {
 
 void MainWindow::setupTopLayout(QWidget *parent) {
     QHBoxLayout *topLayout = new QHBoxLayout(parent);
+    parent->setLayout(topLayout);
 
     label->vidStreamLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     topLayout->addWidget(label->vidStreamLabel);
@@ -282,6 +283,58 @@ void MainWindow::logError(const QString &errorMessage) {
     log->appendPlainText("ERROR: " + errorMessage);
 }
 
+void MainWindow::keyPressEvent(QKeyEvent *event) {
+    if (event->key() == Qt::Key_F) {
+        if (!isFullScreen) {
+            qDebug() << "Full screen called";
+
+            label->vidStreamLabel->removeEventFilter(this);
+            label->vidStreamLabel->setParent(nullptr);
+            label->vidStreamLabel->setWindowFlags(Qt::Window);
+            label->vidStreamLabel->setStyleSheet("background-color: black;");
+            label->vidStreamLabel->installEventFilter(this);
+
+            label->vidStreamLabel->showFullScreen();
+            label->vidStreamLabel->setFocus(Qt::OtherFocusReason);
+
+            isFullScreen = true;
+        }
+    }
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == label->vidStreamLabel && event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_F || keyEvent->key() == Qt::Key_Escape) {
+            qDebug() << "Normal screen called";
+
+            label->vidStreamLabel->setWindowFlags(Qt::Widget);
+            label->vidStreamLabel->hide();
+            label->vidStreamLabel->setParent(nullptr); 
+            label->vidStreamLabel->setParent(label);   
+
+            QWidget *topWidget = centralWidget->findChildren<QWidget*>().at(0);
+            QLayout *topLayout = topWidget->layout();
+            if (topLayout) {
+                QHBoxLayout *hLayout = qobject_cast<QHBoxLayout *>(topLayout);
+                if (hLayout) {
+                    hLayout->insertWidget(0, label->vidStreamLabel);
+                }
+            }
+
+            label->vidStreamLabel->setMinimumSize(640, 480);
+            label->vidStreamLabel->setAlignment(Qt::AlignCenter);
+            label->vidStreamLabel->show();
+            
+            isFullScreen = false;
+            
+            return true;
+        }
+    }
+    
+    return QMainWindow::eventFilter(watched, event);
+}
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     xSlider = nullptr;
     ySlider = nullptr;
@@ -299,6 +352,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     currentYValue = 0;
     currentShotValue = false;
     currentActiveValue = false;
+    isFullScreen = false;
 
     resize(1000, 600);
     label = new VideoLabel();

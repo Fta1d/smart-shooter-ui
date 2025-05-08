@@ -32,6 +32,9 @@ class MainWindow : public QMainWindow {
         void initializeLineEdit(QLineEdit *lineEdit);
         void connectSignalsAndSlots();
 
+        // QWidget *topWidget = nullptr;
+        // QHBoxLayout *topLayout = nullptr;
+
         QPlainTextEdit *log;
         QPushButton *activeButton;
         QPushButton *shotButton;
@@ -56,6 +59,7 @@ class MainWindow : public QMainWindow {
         int currentYValue;
         bool currentShotValue;
         bool currentActiveValue;
+        bool isFullScreen;
 
     public:
         VideoLabel *label;
@@ -90,8 +94,13 @@ class MainWindow : public QMainWindow {
         void shotButtonClicked();
         void connectButtonClicked();
         void closeEvent(QCloseEvent *event);
+        //void fullscreenMode();
         
         // New slots for command sender
         void logMessage(const QString &message);
         void logError(const QString &errorMessage);
+
+    protected:
+        void keyPressEvent(QKeyEvent *event) override;
+        bool eventFilter(QObject *watched, QEvent *event) override;
 };
