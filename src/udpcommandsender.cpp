@@ -105,27 +105,31 @@ void UdpCmdSender::stopSending() {
 
 void UdpCmdSender::prepareAndSendMessage() {
     QMutexLocker locker(&dataMutex);
-    
-    // Create the message string in the format "x,y,shot,active"
+
     int shotInt = shotValue ? 1 : 0;
     int activeInt = activeValue ? 1 : 0;
-    
+
     QString messageStr = QString("%1,%2,%3,%4").arg(xValue).arg(yValue).arg(shotInt).arg(activeInt);
-    
-    // Pack the message using MsgPack
-    msgpack::sbuffer buffer;
-    msgpack::packer<msgpack::sbuffer> packer(&buffer);
     std::string stdStr = messageStr.toStdString();
-    packer.pack(stdStr);
-    
-    // Send the packed message
+
+    msgpack_sbuffer buffer;
+    msgpack_packer packer;
+
+    msgpack_sbuffer_init(&buffer);
+    msgpack_packer_init(&packer, &buffer, msgpack_sbuffer_write);
+
+    msgpack_pack_str(&packer, stdStr.size());
+    msgpack_pack_str_body(&packer, stdStr.c_str(), stdStr.size());
+
     qint64 bytesSent = socket->writeDatagram(
-        buffer.data(), 
-        buffer.size(), 
-        QHostAddress(destinationAddress), 
+        buffer.data,
+        buffer.size,
+        QHostAddress(destinationAddress),
         destinationPort
-    );
-    
+        );
+
+    msgpack_sbuffer_destroy(&buffer);
+
     if (bytesSent == -1) {
         emit errorOccurred("Failed to send UDP datagram: " + socket->errorString());
     }

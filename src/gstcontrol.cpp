@@ -44,7 +44,16 @@ static gboolean bus_callback(GstBus *bus, GstMessage *message, gpointer data) {
     return TRUE;
 }
 
+GstElement *try_decoder(const char* decoder_name) {
+    GstElement *dec = gst_element_factory_make(decoder_name, "decoder");
+    if (dec) {
+        g_print("Successfully created decoder: %s\n", decoder_name);
+    }
+    return dec;
+}
+
 gboolean GstControl::initPipeline() {
+    gst_debug_set_default_threshold(GST_LEVEL_WARNING);
     // GstBus *bus;
 
     // g_print("Initializing webcam pipeline...\n");
@@ -85,22 +94,29 @@ gboolean GstControl::initPipeline() {
 
     GstBus *bus;
     GstCaps *caps;
-
     pipeline = gst_pipeline_new("udp-video-pipeline");
     source = gst_element_factory_make("udpsrc", "udp-source");
     depayloader = gst_element_factory_make("rtph264depay", "depayloader");
-    decoder = gst_element_factory_make("avdec_h264", "decoder");
+    GstElement *parser = gst_element_factory_make("h264parse", "parser");
+    decoder = try_decoder("avdec_h264");
+    if (!decoder) decoder = try_decoder("mfh264dec");
+    if (!decoder) decoder = try_decoder("openh264dec");
+    if (!decoder) decoder = try_decoder("nvh264dec");
+    if (!decoder) {
+        g_printerr("Could not create any H.264 decoder!\n");
+        return -1;
+    }
     converter = gst_element_factory_make("videoconvert", "converter");
     GstElement *capsfilter = gst_element_factory_make("capsfilter", "format-filter");
     sink = gst_element_factory_make("appsink", "video-output");
 
-    if (!pipeline || !source || !depayloader || !decoder || !converter || !capsfilter || !sink) {
+    if (!pipeline || !source || !depayloader || !parser || !decoder || !converter || !capsfilter || !sink) {
         g_printerr("Could not create pipeline element.\n");
+        if (!parser) g_printerr("Failed to create h264parse element\n");
         return -1;
     }
 
-    g_object_set(G_OBJECT(source), "port", 5060, NULL);
-
+    g_object_set(G_OBJECT(source), "port", 5000, NULL);
     caps = gst_caps_from_string("application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264");
     g_object_set(G_OBJECT(source), "caps", caps, NULL);
     gst_caps_unref(caps);
@@ -111,15 +127,11 @@ gboolean GstControl::initPipeline() {
 
     g_object_set(G_OBJECT(sink), "emit-signals", TRUE, NULL);
 
-    caps = gst_caps_from_string("video/x-raw, format=(string)RGB");
-    g_object_set(G_OBJECT(sink), "caps", caps, NULL);
-    gst_caps_unref(caps);
-    
     g_signal_connect(sink, "new-sample", G_CALLBACK(new_sample), &callback_data);
 
-    gst_bin_add_many(GST_BIN(pipeline), source, depayloader, decoder, converter, capsfilter, sink, NULL);
+    gst_bin_add_many(GST_BIN(pipeline), source, depayloader, parser, decoder, converter, capsfilter, sink, NULL);
 
-    if (!gst_element_link_many(source, depayloader, decoder, converter, capsfilter, sink, NULL)) {
+    if (!gst_element_link_many(source, depayloader, parser, decoder, converter, capsfilter, sink, NULL)) {
         g_printerr("Pipeline elements cannot be linked!\n");
         gst_object_unref(GST_OBJECT(pipeline));
         return -1;

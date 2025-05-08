@@ -5,7 +5,7 @@
 #include <QUdpSocket>
 #include <QTimer>
 #include <QMutex>
-#include <msgpack.hpp>
+#include <msgpack.h>
 
 class UdpCmdSender : public QObject {
     Q_OBJECT
