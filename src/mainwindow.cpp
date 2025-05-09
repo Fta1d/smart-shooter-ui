@@ -61,7 +61,7 @@ QHBoxLayout* MainWindow::createConnectionLayout() {
 
     addressLineEdit = new QLineEdit();
     addressLineEdit->setPlaceholderText("Enter address");
-    addressLineEdit->setText("127.0.0.1"); // Default to localhost
+    addressLineEdit->setText("127.0.0.1:5050"); // Default to localhost
 
     QRegularExpression regExp("^[0-9.:]+$");
     QRegularExpressionValidator *validator = new QRegularExpressionValidator(regExp, this);
@@ -237,23 +237,24 @@ void MainWindow::shotButtonClicked() {
 void MainWindow::connectButtonClicked() {
     QMutexLocker locker(&log_mutex);
     QString address = addressLineEdit->text();
-    
+    QStringList addressPortList = address.split(':');
+
     if (!address.isEmpty()) {
         if (udpConnected) {
             log->appendPlainText("UDP already connected!");
             return;
         }
 
-        log->appendPlainText("Connecting UDP to: " + address);
+        log->appendPlainText("Connecting UDP to: " + addressPortList[0]);
         
         // Set destination and start sending
-        emit startUdpSending(address, 5050);
+        emit startUdpSending(addressPortList[0], addressPortList[1].toInt());
         
         udpConnected = true;
         
         // Start GStreamer if not already running
         if (!gstRunning) {
-            log->appendPlainText("Starting video stream from: " + address);
+            log->appendPlainText("Starting video stream from: " + addressPortList[0]);
             gstRunning = true;
             emit startGstProcess();
         }

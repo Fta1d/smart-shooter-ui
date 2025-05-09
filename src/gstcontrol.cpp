@@ -45,6 +45,7 @@ static gboolean bus_callback(GstBus *bus, GstMessage *message, gpointer data) {
 }
 
 gboolean GstControl::initPipeline() {
+    gst_debug_set_default_threshold(GST_LEVEL_WARNING);
     // GstBus *bus;
 
     // g_print("Initializing webcam pipeline...\n");
@@ -85,41 +86,44 @@ gboolean GstControl::initPipeline() {
 
     GstBus *bus;
     GstCaps *caps;
+    GstElement *queue1, *queue2, *queue3;
 
     pipeline = gst_pipeline_new("udp-video-pipeline");
     source = gst_element_factory_make("udpsrc", "udp-source");
+    queue1 = gst_element_factory_make("queue", "queue1");
     depayloader = gst_element_factory_make("rtph264depay", "depayloader");
+    queue2 = gst_element_factory_make("queue", "queue2");
     decoder = gst_element_factory_make("avdec_h264", "decoder");
+    queue3 = gst_element_factory_make("queue", "queue3");
     converter = gst_element_factory_make("videoconvert", "converter");
-    GstElement *capsfilter = gst_element_factory_make("capsfilter", "format-filter");
     sink = gst_element_factory_make("appsink", "video-output");
 
-    if (!pipeline || !source || !depayloader || !decoder || !converter || !capsfilter || !sink) {
+    if (!pipeline || !source || !queue1 || !depayloader || !queue2 || !decoder || !queue3 || !converter || !sink) {
         g_printerr("Could not create pipeline element.\n");
         return -1;
     }
 
+    // Configure source element
     g_object_set(G_OBJECT(source), "port", 5060, NULL);
-
     caps = gst_caps_from_string("application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264");
     g_object_set(G_OBJECT(source), "caps", caps, NULL);
     gst_caps_unref(caps);
 
-    caps = gst_caps_from_string("video/x-raw, format=(string)RGB");
-    g_object_set(G_OBJECT(capsfilter), "caps", caps, NULL);
-    gst_caps_unref(caps);
+    // Configure queues elements
+    g_object_set(G_OBJECT(queue1), "max-size-buffers", 10, "max-size-time", 0, "max-size-bytes", 0, NULL);
+    g_object_set(G_OBJECT(queue2), "max-size-buffers", 10, "max-size-time", 0, "max-size-bytes", 0, NULL);
+    g_object_set(G_OBJECT(queue3), "max-size-buffers", 10, "max-size-time", 0, "max-size-bytes", 0, NULL);
 
+    // Configure sink element
     g_object_set(G_OBJECT(sink), "emit-signals", TRUE, NULL);
-
-    caps = gst_caps_from_string("video/x-raw, format=(string)RGB");
+    caps = gst_caps_from_string("video/x-raw, format=(string)RGBA");
     g_object_set(G_OBJECT(sink), "caps", caps, NULL);
     gst_caps_unref(caps);
-    
     g_signal_connect(sink, "new-sample", G_CALLBACK(new_sample), &callback_data);
 
-    gst_bin_add_many(GST_BIN(pipeline), source, depayloader, decoder, converter, capsfilter, sink, NULL);
+    gst_bin_add_many(GST_BIN(pipeline), source, queue1, depayloader, queue2, decoder, queue3, converter, sink, NULL);
 
-    if (!gst_element_link_many(source, depayloader, decoder, converter, capsfilter, sink, NULL)) {
+    if (!gst_element_link_many(source, queue1, depayloader, queue2, decoder, queue3, converter, sink, NULL)) {
         g_printerr("Pipeline elements cannot be linked!\n");
         gst_object_unref(GST_OBJECT(pipeline));
         return -1;
