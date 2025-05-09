@@ -11,15 +11,15 @@ void MainWindow::initMainWindow() {
     QWidget *bottomWidget = new QWidget();
     
     setupTopLayout(topWidget);
-
+    initializeLogWidget();
     setupBottomLayout(bottomWidget);
 
-    mainLayout->addWidget(topWidget, 1); 
-    mainLayout->addWidget(bottomWidget, 2); 
+    mainLayout->addWidget(topWidget, 2); 
+    mainLayout->addWidget(bottomWidget, 1);
 
     connectSignalsAndSlots();
     setCentralWidget(centralWidget);
-
+    
     show();
 }
 
@@ -27,13 +27,15 @@ void MainWindow::setupTopLayout(QWidget *parent) {
     QHBoxLayout *topLayout = new QHBoxLayout(parent);
     parent->setLayout(topLayout);
 
-    label->vidStreamLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    topLayout->addWidget(label->vidStreamLabel);
+    // label->vidStreamLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    topLayout->addWidget(label->vidStreamLabel, 2);
     
     QVBoxLayout *verticalRight = new QVBoxLayout();
     verticalRight->addLayout(createXSliderLayout());
     verticalRight->addLayout(createYSliderLayout());
     verticalRight->addLayout(createStateButtonLayout());
+    verticalRight->addWidget(logButton);
+    verticalRight->addWidget(saveframeButton);
     verticalRight->addStretch();
     verticalRight->addLayout(createLogoLayout());
     verticalRight->addStretch();
@@ -44,8 +46,10 @@ void MainWindow::setupTopLayout(QWidget *parent) {
 
 void MainWindow::setupBottomLayout(QWidget *parent) {
     QHBoxLayout *bottomLayout = new QHBoxLayout(parent);
-    initializeLogWidget();
-    bottomLayout->addWidget(log);
+    
+    initializeDesiredFramesViewWidget();
+
+    bottomLayout->addWidget(desiredFramesView);
 }
 
 QHBoxLayout* MainWindow::createLogoLayout() {
@@ -55,8 +59,10 @@ QHBoxLayout* MainWindow::createLogoLayout() {
     QPixmap pixmap("../logo.jpg");
 
     pixmap = pixmap.scaled(316, 350, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    // pixmap.scaledToHeight(350);
 
     logoLabel->setPixmap(pixmap);
+    logoLabel->setAlignment(Qt::AlignCenter);
     logoLayout->addWidget(logoLabel);
 
     return logoLayout;
@@ -79,7 +85,7 @@ QHBoxLayout* MainWindow::createConnectionLayout() {
     addressLineEdit = new QLineEdit();
     addressLineEdit->setPlaceholderText("Enter address");
     addressLineEdit->setText("127.0.0.1:5050"); // Default to localhost
-    // addressLineEdit->setEnabled(false);
+    addressLineEdit->setEnabled(false);
 
     QRegularExpression regExp("^[0-9.:]+$");
     QRegularExpressionValidator *validator = new QRegularExpressionValidator(regExp, this);
@@ -137,6 +143,13 @@ void MainWindow::initializeLogWidget() {
     log = new QPlainTextEdit();
     log->setReadOnly(true);
     log->setPlaceholderText("Event log...");
+    log->setWindowFlag(Qt::Window);
+}
+
+void MainWindow::initializeDesiredFramesViewWidget() {
+    desiredFramesView = new QListWidget();
+    desiredFramesView->setFlow(QListView::LeftToRight);
+    desiredFramesView->setIconSize(QSize(390, 390));
 }
 
 void MainWindow::initializeButtons() {
@@ -145,6 +158,12 @@ void MainWindow::initializeButtons() {
     
     shotButton = new QPushButton("Shot", this);
     shotButton->setCheckable(false);
+
+    logButton = new QPushButton("Show Log", this);
+    logButton->setCheckable(false);
+
+    saveframeButton = new QPushButton("Save Frame", this);
+    saveframeButton->setCheckable(false);
 }
 
 void MainWindow::initializeXSlider(QSlider *slider) {
@@ -182,7 +201,9 @@ void MainWindow::connectSignalsAndSlots() {
     connect(activeButton, &QPushButton::clicked, this, &MainWindow::stateButtonClicked);
     connect(shotButton, &QPushButton::clicked, this, &MainWindow::shotButtonClicked);
     connect(connectButton, &QPushButton::clicked, this, &MainWindow::connectButtonClicked);
-    
+    connect(logButton, &QPushButton::clicked, this, &MainWindow::showLog);
+    connect(saveframeButton, &QPushButton::clicked, this, &MainWindow::saveFrame);
+
     // Connect signal values to cache them locally
     connect(xSlider, &QSlider::valueChanged, [this](int value) {
         currentXValue = value;
@@ -272,6 +293,8 @@ void MainWindow::connectButtonClicked() {
         log->appendPlainText("Connecting UDP to: " + address);
         
         // Set destination and start sending
+        emit updateXValue(320);
+        emit updateYValue(320);
         emit startUdpSending(addressPortList[0], addressPortList[1].toInt());
         
         udpConnected = true;
@@ -285,6 +308,26 @@ void MainWindow::connectButtonClicked() {
     } else {
         log->appendPlainText("Error: Address field is empty");
     }
+}
+
+void MainWindow::showLog() {
+    if (!log->isVisible()) {
+        log->show();
+    } else {
+        log->close();
+    }
+}
+
+void MainWindow::saveFrame() {
+    QMutexLocker locker(&label_mutex);
+    QListWidgetItem *item = new QListWidgetItem();
+
+    QPixmap labelPixmap = label->vidStreamLabel->pixmap();
+
+    QIcon icon(labelPixmap);
+    item->setIcon(icon);
+
+    desiredFramesView->insertItem(frameIndex++, item);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -379,15 +422,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     currentActiveValue = false;
     isFullScreen = false;
 
-    frameHeight = 1080;
-    frameWidth = 1920;
+    frameHeight = 640;
+    frameWidth = 640;
+    frameIndex = 0;
 
-    resize(1160, 600);
+    resize(1160, 830);
     label = new VideoLabel();
 
     
-    setFixedWidth(1160); 
-    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    // setFixedWidth(1160);
+    // setFixedHeight(830); 
+    
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 }
 
 MainWindow::~MainWindow() {

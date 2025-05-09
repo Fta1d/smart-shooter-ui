@@ -8,6 +8,7 @@
 #include <QPushButton>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QListWidget>
 
 #include "inc/videolabel.h"
 
@@ -27,6 +28,7 @@ class MainWindow : public QMainWindow {
         QHBoxLayout* createConnectionLayout();
         QHBoxLayout* createLogoLayout();
         void initializeLogWidget();
+        void initializeDesiredFramesViewWidget();
         void initializeButtons();
         void initializeXSlider(QSlider *slider);
         void initializeYSlider(QSlider *slider);
@@ -41,6 +43,8 @@ class MainWindow : public QMainWindow {
         QPlainTextEdit *log;
         QPushButton *activeButton;
         QPushButton *shotButton;
+        QPushButton *logButton;
+        QPushButton *saveframeButton;
         QSlider *xSlider;
         QSlider *ySlider;
         QLineEdit *xLineEdit;
@@ -48,6 +52,7 @@ class MainWindow : public QMainWindow {
         QWidget *centralWidget;
         QLineEdit *addressLineEdit;
         QPushButton *connectButton;
+        QListWidget *desiredFramesView;
 
         bool gstRunning;
         bool udpConnected;
@@ -56,9 +61,11 @@ class MainWindow : public QMainWindow {
         UdpCmdSender *cmdSender;
         
         mutable QMutex log_mutex;
+        mutable QMutex label_mutex;
 
         int frameHeight;
         int frameWidth;
+        int frameIndex;
         
         // Current values
         int currentXValue;
@@ -99,6 +106,8 @@ class MainWindow : public QMainWindow {
         void stateButtonClicked(bool checked);
         void shotButtonClicked();
         void connectButtonClicked();
+        void showLog();
+        void saveFrame();
         void closeEvent(QCloseEvent *event);
         
         // New slots for command sender
