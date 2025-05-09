@@ -15,7 +15,7 @@ void VideoLabel::updateFrame() {
 
 VideoLabel::VideoLabel() {
     vidStreamLabel = new QLabel(this);
-    vidStreamLabel->setMinimumSize(640, 480);
+    vidStreamLabel->setMinimumSize(800, 600);
     vidStreamLabel->setAlignment(Qt::AlignCenter);
     vidStreamLabel->setStyleSheet("background-color: black;");
     vidStreamLabel->setText("Waiting for stream...");

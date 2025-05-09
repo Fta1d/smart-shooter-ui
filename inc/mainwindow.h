@@ -30,6 +30,8 @@ class MainWindow : public QMainWindow {
         void initializeButtons();
         void initializeXSlider(QSlider *slider);
         void initializeYSlider(QSlider *slider);
+        void initializeLineEditX(QLineEdit *lineEdit);
+        void initializeLineEditY(QLineEdit *lineEdit);
         void initializeLineEdit(QLineEdit *lineEdit);
         void connectSignalsAndSlots();
 
@@ -54,6 +56,9 @@ class MainWindow : public QMainWindow {
         UdpCmdSender *cmdSender;
         
         mutable QMutex log_mutex;
+
+        int frameHeight;
+        int frameWidth;
         
         // Current values
         int currentXValue;
@@ -95,7 +100,6 @@ class MainWindow : public QMainWindow {
         void shotButtonClicked();
         void connectButtonClicked();
         void closeEvent(QCloseEvent *event);
-        //void fullscreenMode();
         
         // New slots for command sender
         void logMessage(const QString &message);

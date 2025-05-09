@@ -3,6 +3,7 @@
 
 void MainWindow::initMainWindow() {
     centralWidget = new QWidget(this);
+    // centralWidget->setStyleSheet("background-color:rgb(0, 9, 51);");
 
     QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
 
@@ -33,7 +34,9 @@ void MainWindow::setupTopLayout(QWidget *parent) {
     verticalRight->addLayout(createXSliderLayout());
     verticalRight->addLayout(createYSliderLayout());
     verticalRight->addLayout(createStateButtonLayout());
+    verticalRight->addStretch();
     verticalRight->addLayout(createLogoLayout());
+    verticalRight->addStretch();
     verticalRight->addLayout(createConnectionLayout());
     
     topLayout->addLayout(verticalRight, 1);
@@ -51,7 +54,7 @@ QHBoxLayout* MainWindow::createLogoLayout() {
 
     QPixmap pixmap("../logo.jpg");
 
-    pixmap = pixmap.scaled(316, 300, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    pixmap = pixmap.scaled(316, 350, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
     logoLabel->setPixmap(pixmap);
     logoLayout->addWidget(logoLabel);
@@ -76,6 +79,7 @@ QHBoxLayout* MainWindow::createConnectionLayout() {
     addressLineEdit = new QLineEdit();
     addressLineEdit->setPlaceholderText("Enter address");
     addressLineEdit->setText("127.0.0.1:5050"); // Default to localhost
+    // addressLineEdit->setEnabled(false);
 
     QRegularExpression regExp("^[0-9.:]+$");
     QRegularExpressionValidator *validator = new QRegularExpressionValidator(regExp, this);
@@ -100,7 +104,7 @@ QHBoxLayout* MainWindow::createXSliderLayout() {
     initializeXSlider(xSlider);
     
     xLineEdit = new QLineEdit();
-    initializeLineEdit(xLineEdit);
+    initializeLineEditX(xLineEdit);
     
     QLabel *xLabel = new QLabel("X:");
     
@@ -118,7 +122,7 @@ QHBoxLayout* MainWindow::createYSliderLayout() {
     initializeYSlider(ySlider);
 
     yLineEdit = new QLineEdit();
-    initializeLineEdit(yLineEdit);
+    initializeLineEditY(yLineEdit);
 
     QLabel *yLabel = new QLabel("Y:");
 
@@ -145,20 +149,26 @@ void MainWindow::initializeButtons() {
 
 void MainWindow::initializeXSlider(QSlider *slider) {
     slider->setMinimum(0);
-    slider->setMaximum(label->width());
-    slider->setValue(0); 
+    slider->setMaximum(frameWidth);
+    slider->setValue(frameWidth / 2); 
 }
 
 void MainWindow::initializeYSlider(QSlider *slider) {
     slider->setMinimum(0);
-    slider->setMaximum(label->height());
-    slider->setValue(0); 
+    slider->setMaximum(frameHeight);
+    slider->setValue(frameHeight / 2); 
 }
 
-void MainWindow::initializeLineEdit(QLineEdit *lineEdit) {
-    lineEdit->setValidator(new QIntValidator(0, 100, this));
+void MainWindow::initializeLineEditX(QLineEdit *lineEdit) {
+    lineEdit->setValidator(new QIntValidator(0, frameWidth, this));
     lineEdit->setMaximumWidth(50);
-    lineEdit->setText("0"); 
+    lineEdit->setText(QString::number(frameWidth / 2)); 
+}
+
+void MainWindow::initializeLineEditY(QLineEdit *lineEdit) {
+    lineEdit->setValidator(new QIntValidator(0, frameHeight, this));
+    lineEdit->setMaximumWidth(50);
+    lineEdit->setText(QString::number(frameHeight / 2)); 
 }
 
 void MainWindow::connectSignalsAndSlots() {
@@ -337,7 +347,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
                 }
             }
 
-            label->vidStreamLabel->setMinimumSize(640, 480);
+            label->vidStreamLabel->setMinimumSize(800, 600);
             label->vidStreamLabel->setAlignment(Qt::AlignCenter);
             label->vidStreamLabel->show();
             
@@ -369,10 +379,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     currentActiveValue = false;
     isFullScreen = false;
 
-    resize(1000, 600);
+    frameHeight = 1080;
+    frameWidth = 1920;
+
+    resize(1160, 600);
     label = new VideoLabel();
 
-    setFixedWidth(1000); 
+    
+    setFixedWidth(1160); 
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 }
 
