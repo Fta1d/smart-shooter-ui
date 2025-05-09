@@ -25,6 +25,7 @@ class MainWindow : public QMainWindow {
         QHBoxLayout* createYSliderLayout();
         QHBoxLayout* createStateButtonLayout();
         QHBoxLayout* createConnectionLayout();
+        QHBoxLayout* createLogoLayout();
         void initializeLogWidget();
         void initializeButtons();
         void initializeXSlider(QSlider *slider);

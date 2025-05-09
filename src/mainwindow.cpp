@@ -33,7 +33,7 @@ void MainWindow::setupTopLayout(QWidget *parent) {
     verticalRight->addLayout(createXSliderLayout());
     verticalRight->addLayout(createYSliderLayout());
     verticalRight->addLayout(createStateButtonLayout());
-    verticalRight->addStretch();
+    verticalRight->addLayout(createLogoLayout());
     verticalRight->addLayout(createConnectionLayout());
     
     topLayout->addLayout(verticalRight, 1);
@@ -43,6 +43,20 @@ void MainWindow::setupBottomLayout(QWidget *parent) {
     QHBoxLayout *bottomLayout = new QHBoxLayout(parent);
     initializeLogWidget();
     bottomLayout->addWidget(log);
+}
+
+QHBoxLayout* MainWindow::createLogoLayout() {
+    QHBoxLayout *logoLayout = new QHBoxLayout();
+    QLabel *logoLabel = new QLabel();
+
+    QPixmap pixmap("../logo.jpg");
+
+    pixmap = pixmap.scaled(316, 300, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+
+    logoLabel->setPixmap(pixmap);
+    logoLayout->addWidget(logoLabel);
+
+    return logoLayout;
 }
 
 QHBoxLayout* MainWindow::createStateButtonLayout() {
@@ -245,7 +259,7 @@ void MainWindow::connectButtonClicked() {
             return;
         }
 
-        log->appendPlainText("Connecting UDP to: " + addressPortList[0]);
+        log->appendPlainText("Connecting UDP to: " + address);
         
         // Set destination and start sending
         emit startUdpSending(addressPortList[0], addressPortList[1].toInt());
@@ -254,7 +268,7 @@ void MainWindow::connectButtonClicked() {
         
         // Start GStreamer if not already running
         if (!gstRunning) {
-            log->appendPlainText("Starting video stream from: " + addressPortList[0]);
+            log->appendPlainText("Starting video stream from: " + QStringLiteral("5060"));
             gstRunning = true;
             emit startGstProcess();
         }
@@ -357,6 +371,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     resize(1000, 600);
     label = new VideoLabel();
+
+    setFixedWidth(1000); 
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 }
 
 MainWindow::~MainWindow() {
