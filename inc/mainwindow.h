@@ -21,6 +21,7 @@ class MainWindow : public QMainWindow {
     private:
         void setupTopLayout(QWidget *parent);
         void setupBottomLayout(QWidget *parent);
+        void applyDeltaStyle();
 
         QHBoxLayout* createXSliderLayout();
         QHBoxLayout* createYSliderLayout();

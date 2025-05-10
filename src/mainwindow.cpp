@@ -20,6 +20,8 @@ void MainWindow::initMainWindow() {
     connectSignalsAndSlots();
     setCentralWidget(centralWidget);
     
+    applyDeltaStyle();
+
     show();
 }
 
@@ -149,7 +151,7 @@ void MainWindow::initializeLogWidget() {
 void MainWindow::initializeDesiredFramesViewWidget() {
     desiredFramesView = new QListWidget();
     desiredFramesView->setFlow(QListView::LeftToRight);
-    desiredFramesView->setIconSize(QSize(390, 390));
+    desiredFramesView->setIconSize(QSize(350, 350));
 }
 
 void MainWindow::initializeButtons() {
@@ -312,6 +314,7 @@ void MainWindow::connectButtonClicked() {
 
 void MainWindow::showLog() {
     if (!log->isVisible()) {
+        log->resize(400, 400);
         log->show();
     } else {
         log->close();
@@ -328,6 +331,7 @@ void MainWindow::saveFrame() {
     item->setIcon(icon);
 
     desiredFramesView->insertItem(frameIndex++, item);
+    desiredFramesView->scrollToItem(item);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -359,7 +363,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
             label->vidStreamLabel->removeEventFilter(this);
             label->vidStreamLabel->setParent(nullptr);
             label->vidStreamLabel->setWindowFlags(Qt::Window);
-            label->vidStreamLabel->setStyleSheet("background-color: black;");
+            // label->vidStreamLabel->setStyleSheet("background-color: black;");
             label->vidStreamLabel->installEventFilter(this);
 
             label->vidStreamLabel->showFullScreen();
@@ -438,4 +442,33 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
 MainWindow::~MainWindow() {
     // cmdSender is not owned by MainWindow, so we don't delete it here
+}
+
+void MainWindow::applyDeltaStyle() {
+    // Special styling for video label
+    if (label && label->vidStreamLabel) {
+        label->vidStreamLabel->setStyleSheet(R"(
+            QLabel {
+                background-color: #000000;
+                border: 1px solid #4A5660;
+                border-radius: 3px;
+                color: #FFFFFF;
+            }
+        )");
+    }
+    
+    // Make containers look like cards
+    QList<QWidget*> topLevelWidgets = centralWidget->findChildren<QWidget*>();
+    for (QWidget* widget : topLevelWidgets) {
+        if (widget->parent() == centralWidget && widget->objectName() != "") {
+            widget->setStyleSheet(widget->styleSheet() + R"(
+                QWidget {
+                    background-color: #1F2529;
+                    border: 1px solid #4A5660;
+                    border-radius: 4px;
+                    padding: 10px;
+                }
+            )");
+        }
+    }
 }
