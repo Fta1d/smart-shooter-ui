@@ -19,7 +19,7 @@ class AppController : public QObject {
         QThread cmdSenderThread;  // Added thread for UdpCmdSender
 
     public slots:
-        void stopGstreamer() {
+        void stopApp() {
             if (gst && gst->isRunning()) {
                 gst->stopPipeline();
             }

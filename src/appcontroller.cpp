@@ -5,7 +5,7 @@ void AppController::run() {
     gst->moveToThread(&gstThread);
     connect(&gstThread, &QThread::finished, gst, &QObject::deleteLater);
     connect(window, &MainWindow::startGstProcess, gst, &GstControl::connectToStream, Qt::QueuedConnection);
-    connect(window, &MainWindow::windowClosed, this, &AppController::stopGstreamer);
+    connect(window, &MainWindow::windowClosed, this, &AppController::stopApp);
 
     window->label->setGstreamer(gst);
     connect(gst, &GstControl::frameReady, window->label, &VideoLabel::updateFrame, Qt::QueuedConnection);

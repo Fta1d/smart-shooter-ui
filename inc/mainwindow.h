@@ -9,6 +9,7 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QListWidget>
+#include <QCheckBox>
 
 #include "inc/videolabel.h"
 
@@ -98,6 +99,8 @@ class MainWindow : public QMainWindow {
 
     public slots:
         void initMainWindow();
+        void logMessage(const QString &message);
+        void logError(const QString &errorMessage);
 
     private slots:
         void updateXLineEdit();
@@ -111,9 +114,6 @@ class MainWindow : public QMainWindow {
         void saveFrame();
         void closeEvent(QCloseEvent *event);
         
-        // New slots for command sender
-        void logMessage(const QString &message);
-        void logError(const QString &errorMessage);
 
     protected:
         void keyPressEvent(QKeyEvent *event) override;

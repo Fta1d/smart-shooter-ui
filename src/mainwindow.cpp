@@ -430,13 +430,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     frameWidth = 640;
     frameIndex = 0;
 
-    resize(1160, 830);
+    resize(1160, 1000);
     label = new VideoLabel();
 
-    
-    // setFixedWidth(1160);
-    // setFixedHeight(830); 
-    
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 }
 

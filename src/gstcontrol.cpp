@@ -130,7 +130,7 @@ gboolean GstControl::initPipeline() {
     }
 
     bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
-    gst_bus_add_watch(bus, bus_callback, NULL);
+    gst_bus_add_watch(bus, bus_callback, this);
     gst_object_unref(bus);
 
     return 1;
@@ -231,7 +231,6 @@ GstFlowReturn GstControl::procesSample(GstSample *sample) {
             gst_buffer_unmap(buffer, &map);
 
             framePixmap = QPixmap::fromImage(imageCopy);
-
 
             emit frameReady();
 
