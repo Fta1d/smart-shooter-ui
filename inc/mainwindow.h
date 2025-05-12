@@ -15,6 +15,7 @@
 
 // Forward declaration
 class UdpCmdSender;
+class LogoDetector;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -29,6 +30,7 @@ class MainWindow : public QMainWindow {
         QHBoxLayout* createStateButtonLayout();
         QHBoxLayout* createConnectionLayout();
         QHBoxLayout* createLogoLayout();
+        QHBoxLayout* createLogoDetectionLayout();
         void initializeLogWidget();
         void initializeDesiredFramesViewWidget();
         void initializeButtons();
@@ -46,7 +48,6 @@ class MainWindow : public QMainWindow {
         QPushButton *activeButton;
         QPushButton *shotButton;
         QPushButton *logButton;
-        QPushButton *saveframeButton;
         QSlider *xSlider;
         QSlider *ySlider;
         QLineEdit *xLineEdit;
@@ -55,12 +56,15 @@ class MainWindow : public QMainWindow {
         QLineEdit *addressLineEdit;
         QPushButton *connectButton;
         QListWidget *desiredFramesView;
+        QCheckBox *logoDetectionEnabled;
+        QPushButton *clearFramesButton;
 
         bool gstRunning;
         bool udpConnected;
         
         // UdpCmdSender pointer - not owned by MainWindow
         UdpCmdSender *cmdSender;
+        LogoDetector *logoDetector;
         
         mutable QMutex log_mutex;
         mutable QMutex label_mutex;
@@ -84,6 +88,7 @@ class MainWindow : public QMainWindow {
         
         // Set the UdpCmdSender from AppController
         void setUdpCmdSender(UdpCmdSender *sender);
+        void setLogoDetector(LogoDetector *detector);
 
     signals:
         void startGstProcess();
@@ -97,10 +102,15 @@ class MainWindow : public QMainWindow {
         void updateShotValue(bool value);
         void updateActiveValue(bool value);
 
+        void startLogoDetection();
+        void stopLogoDetection();
+
     public slots:
         void initMainWindow();
         void logMessage(const QString &message);
         void logError(const QString &errorMessage);
+
+        void autoSaveFrame();
 
     private slots:
         void updateXLineEdit();
@@ -111,8 +121,9 @@ class MainWindow : public QMainWindow {
         void shotButtonClicked();
         void connectButtonClicked();
         void showLog();
-        void saveFrame();
         void closeEvent(QCloseEvent *event);
+        void logoDetectionToggled(bool checked);
+        void clearFramesButtonClicked();
         
 
     protected:

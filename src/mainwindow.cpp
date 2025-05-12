@@ -1,5 +1,6 @@
 #include "inc/mainwindow.h"
 #include "inc/udpcommandsender.h"  // Include UdpCmdSender
+#include "inc/logodetector.h"
 
 void MainWindow::initMainWindow() {
     centralWidget = new QWidget(this);
@@ -37,13 +38,27 @@ void MainWindow::setupTopLayout(QWidget *parent) {
     verticalRight->addLayout(createYSliderLayout());
     verticalRight->addLayout(createStateButtonLayout());
     verticalRight->addWidget(logButton);
-    verticalRight->addWidget(saveframeButton);
+    verticalRight->addLayout(createLogoDetectionLayout());
     verticalRight->addStretch();
     verticalRight->addLayout(createLogoLayout());
     verticalRight->addStretch();
     verticalRight->addLayout(createConnectionLayout());
     
     topLayout->addLayout(verticalRight, 1);
+}
+
+QHBoxLayout* MainWindow::createLogoDetectionLayout() {
+    QHBoxLayout *logoDetectionLayout = new QHBoxLayout();
+
+    logoDetectionEnabled = new QCheckBox("Enable succsessfull shot save");
+    logoDetectionEnabled->setChecked(false);
+
+    clearFramesButton = new QPushButton("Clear Saved Frames");
+
+    logoDetectionLayout->addWidget(logoDetectionEnabled);
+    logoDetectionLayout->addWidget(clearFramesButton);
+    
+    return logoDetectionLayout;
 }
 
 void MainWindow::setupBottomLayout(QWidget *parent) {
@@ -163,9 +178,6 @@ void MainWindow::initializeButtons() {
 
     logButton = new QPushButton("Show Log", this);
     logButton->setCheckable(false);
-
-    saveframeButton = new QPushButton("Save Frame", this);
-    saveframeButton->setCheckable(false);
 }
 
 void MainWindow::initializeXSlider(QSlider *slider) {
@@ -204,7 +216,6 @@ void MainWindow::connectSignalsAndSlots() {
     connect(shotButton, &QPushButton::clicked, this, &MainWindow::shotButtonClicked);
     connect(connectButton, &QPushButton::clicked, this, &MainWindow::connectButtonClicked);
     connect(logButton, &QPushButton::clicked, this, &MainWindow::showLog);
-    connect(saveframeButton, &QPushButton::clicked, this, &MainWindow::saveFrame);
 
     // Connect signal values to cache them locally
     connect(xSlider, &QSlider::valueChanged, [this](int value) {
@@ -216,6 +227,9 @@ void MainWindow::connectSignalsAndSlots() {
         currentYValue = value;
         emit updateYValue(value);
     });
+
+    connect(logoDetectionEnabled, &QCheckBox::toggled, this, &MainWindow::logoDetectionToggled);
+    connect(clearFramesButton, &QPushButton::clicked, this, &MainWindow::clearFramesButtonClicked);
 }
 
 void MainWindow::setUdpCmdSender(UdpCmdSender *sender) {
@@ -232,6 +246,16 @@ void MainWindow::setUdpCmdSender(UdpCmdSender *sender) {
     connect(this, &MainWindow::updateYValue, cmdSender, &UdpCmdSender::setYValue, Qt::QueuedConnection);
     connect(this, &MainWindow::updateShotValue, cmdSender, &UdpCmdSender::setShotValue, Qt::QueuedConnection);
     connect(this, &MainWindow::updateActiveValue, cmdSender, &UdpCmdSender::setActiveValue, Qt::QueuedConnection);
+}
+
+void MainWindow::setLogoDetector(LogoDetector *detector) {
+    logoDetector = detector;
+
+    connect(this, &MainWindow::startLogoDetection, logoDetector, &LogoDetector::startDetection, Qt::QueuedConnection);
+    connect(this, &MainWindow::stopLogoDetection, logoDetector, &LogoDetector::stopDetection, Qt::QueuedConnection);
+
+    connect(logoDetector, &LogoDetector::logoDetected, this, &MainWindow::autoSaveFrame, Qt::QueuedConnection);
+    connect(logoDetector, &LogoDetector::message, this, &MainWindow::logMessage, Qt::QueuedConnection);
 }
 
 void MainWindow::updateXLineEdit() {
@@ -312,6 +336,39 @@ void MainWindow::connectButtonClicked() {
     }
 }
 
+void MainWindow::logoDetectionToggled(bool checked) {
+    if (checked) {
+        emit startLogoDetection();
+        logMessage("Logo detection enabled");
+    } else {
+        emit stopLogoDetection();
+        logMessage("Logo detection disabled");
+    }
+}
+
+void MainWindow::clearFramesButtonClicked() {
+    desiredFramesView->clear();
+    frameIndex = 0;
+    logMessage("All saved frames cleared");
+}
+
+void MainWindow::autoSaveFrame() {
+    QMutexLocker locker(&label_mutex);
+    QListWidgetItem *item = new QListWidgetItem();
+
+    QPixmap labelPixmap = label->vidStreamLabel->pixmap();
+
+    if (!labelPixmap.isNull()) {
+        QIcon icon(labelPixmap);
+        item->setIcon(icon);
+
+        desiredFramesView->insertItem(frameIndex++, item);
+        desiredFramesView->scrollToItem(item);
+        
+        logMessage("Logo detected - Frame saved automatically");
+    }
+}
+
 void MainWindow::showLog() {
     if (!log->isVisible()) {
         log->resize(400, 400);
@@ -319,19 +376,6 @@ void MainWindow::showLog() {
     } else {
         log->close();
     }
-}
-
-void MainWindow::saveFrame() {
-    QMutexLocker locker(&label_mutex);
-    QListWidgetItem *item = new QListWidgetItem();
-
-    QPixmap labelPixmap = label->vidStreamLabel->pixmap();
-
-    QIcon icon(labelPixmap);
-    item->setIcon(icon);
-
-    desiredFramesView->insertItem(frameIndex++, item);
-    desiredFramesView->scrollToItem(item);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
