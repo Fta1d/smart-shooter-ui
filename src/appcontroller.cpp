@@ -25,12 +25,7 @@ void AppController::run() {
     window->setLogoDetector(logoDetector);
     
     // Connect frame update to logo detection
-    connect(gst, &GstControl::frameReady, this, [this]() {
-        QPixmap frame = gst->getFramePixmap();
-        if (!frame.isNull()) {
-            logoDetector->processFrame(frame.toImage());
-        }
-    }, Qt::QueuedConnection);
+    connect(gst, &GstControl::frameReady, this, &AppController::logoDetection, Qt::QueuedConnection);
     
     // Start all threads
     gstThread.start();
@@ -38,6 +33,13 @@ void AppController::run() {
     logoDetectorThread.start();
 
     window->initMainWindow();
+}
+
+void AppController::logoDetection() {
+    QPixmap frame = gst->getFramePixmap();
+    if (!frame.isNull()) {
+        logoDetector->processFrame(frame.toImage());
+    }
 }
 
 

@@ -47,16 +47,16 @@ void MainWindow::setupTopLayout(QWidget *parent) {
     topLayout->addLayout(verticalRight, 1);
 }
 
-QHBoxLayout* MainWindow::createLogoDetectionLayout() {
-    QHBoxLayout *logoDetectionLayout = new QHBoxLayout();
+QVBoxLayout* MainWindow::createLogoDetectionLayout() {
+    QVBoxLayout *logoDetectionLayout = new QVBoxLayout();
 
-    logoDetectionEnabled = new QCheckBox("Enable succsessfull shot save");
+    logoDetectionEnabled = new QCheckBox("Enable successful shot save");
     logoDetectionEnabled->setChecked(false);
 
     clearFramesButton = new QPushButton("Clear Saved Frames");
 
-    logoDetectionLayout->addWidget(logoDetectionEnabled);
     logoDetectionLayout->addWidget(clearFramesButton);
+    logoDetectionLayout->addWidget(logoDetectionEnabled);
     
     return logoDetectionLayout;
 }
@@ -402,12 +402,10 @@ void MainWindow::logError(const QString &errorMessage) {
 void MainWindow::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_F) {
         if (!isFullScreen) {
-            qDebug() << "Full screen called";
 
             label->vidStreamLabel->removeEventFilter(this);
             label->vidStreamLabel->setParent(nullptr);
             label->vidStreamLabel->setWindowFlags(Qt::Window);
-            // label->vidStreamLabel->setStyleSheet("background-color: black;");
             label->vidStreamLabel->installEventFilter(this);
 
             label->vidStreamLabel->showFullScreen();
@@ -422,7 +420,6 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
     if (watched == label->vidStreamLabel && event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_F || keyEvent->key() == Qt::Key_Escape) {
-            qDebug() << "Normal screen called";
 
             label->vidStreamLabel->setWindowFlags(Qt::Widget);
             label->vidStreamLabel->hide();

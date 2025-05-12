@@ -1,6 +1,4 @@
 #include "inc/logodetector.h"
-#include <QDebug>
-#include <QDir>
 
 LogoDetector::LogoDetector(QObject *parent) : QObject(parent) {
     running = false;
@@ -9,7 +7,7 @@ LogoDetector::LogoDetector(QObject *parent) : QObject(parent) {
     checkFrequency = 1;  
 
     QString appDir = QDir::currentPath();
-    QString logoPath = appDir + "/../logo.jpg";
+    QString logoPath = appDir + "/../logo25.jpg";
     emit message("Current directory: " + appDir);
     emit message("Looking for logo at: " + logoPath);   
 
@@ -136,7 +134,7 @@ void LogoDetector::processFrame(const QImage &frame) {
 //     logoSize = 100;   
 //     checkFrequency = 3;  
     
-//     
+    
 //     QTimer::singleShot(500, [this]() {
 //         emit message("Logo detector running in MOTION DETECTION MODE");
 //         emit message("Will detect motion in top-left corner");
@@ -190,80 +188,80 @@ void LogoDetector::processFrame(const QImage &frame) {
 //     static int frameCounter = 0;
 //     frameCounter++;
     
-//     
+    
 //     if (frameCounter % checkFrequency != 0) {
 //         return;
 //     }
     
-//     
+    
 //     cv::Mat cvFrame = QImageToCvMat(frame);
     
-//     
+    
 //     if (cvFrame.empty() || cvFrame.cols < logoSize || cvFrame.rows < logoSize) {
 //         return;
 //     }
     
-//     
+    
 //     cv::Mat roi = cvFrame(cv::Rect(0, 0, logoSize, logoSize));
     
-//     
+    
 //     cv::Mat grayRoi;
 //     cv::cvtColor(roi, grayRoi, cv::COLOR_BGR2GRAY);
     
-//     
+    
 //     cv::GaussianBlur(grayRoi, grayRoi, cv::Size(21, 21), 0);
     
-//     
+    
 //     static cv::Mat firstFrame;
 //     if (firstFrame.empty()) {
 //         grayRoi.copyTo(firstFrame);
 //         return;
 //     }
     
-//     
+    
 //     cv::Mat frameDelta;
 //     cv::absdiff(firstFrame, grayRoi, frameDelta);
     
-//     
+    
 //     cv::Mat thresh;
 //     cv::threshold(frameDelta, thresh, 25, 255, cv::THRESH_BINARY);
     
-//     
+    
 //     cv::dilate(thresh, thresh, cv::Mat(), cv::Point(-1,-1), 2);
     
-//     
+    
 //     std::vector<std::vector<cv::Point>> contours;
 //     cv::findContours(thresh, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
     
-//     
+    
 //     bool motionDetected = false;
 //     for (const auto& contour : contours) {
-//         
+        
 //         double area = cv::contourArea(contour);
         
-//         
+        
 //         if (area < 500) continue;
         
 //         motionDetected = true;
 //         break;
 //     }
     
-//    
+   
 //     double meanDiff = cv::mean(frameDelta)[0];
     
-//    
+   
 //     if (motionDetected || meanDiff > threshold) {
 //         emit message(QString("Motion detected! Avg diff: %1, Contours: %2")
 //                      .arg(meanDiff, 0, 'f', 1)
 //                      .arg(contours.size()));
 //         emit logoDetected();
         
-//         
+        
 //         grayRoi.copyTo(firstFrame);
 //     }
     
-//     
-//     
+    
+    
 //     static int frameUpdateCounter = 0;
 //     frameUpdateCounter++;
 //     if (frameUpdateCounter > 10) {
@@ -273,6 +271,6 @@ void LogoDetector::processFrame(const QImage &frame) {
 // }
 
 // void LogoDetector::setLogoTemplate(const QString &logoPath) {
-//     
+    
 //     emit message("Motion detection mode active - template matching disabled");
 // }

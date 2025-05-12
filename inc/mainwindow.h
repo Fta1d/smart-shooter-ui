@@ -30,7 +30,7 @@ class MainWindow : public QMainWindow {
         QHBoxLayout* createStateButtonLayout();
         QHBoxLayout* createConnectionLayout();
         QHBoxLayout* createLogoLayout();
-        QHBoxLayout* createLogoDetectionLayout();
+        QVBoxLayout* createLogoDetectionLayout();
         void initializeLogWidget();
         void initializeDesiredFramesViewWidget();
         void initializeButtons();

@@ -39,6 +39,8 @@ class AppController : public QObject {
             
             qApp->quit();
         }
+
+        void logoDetection();
         
     public:
         void run();

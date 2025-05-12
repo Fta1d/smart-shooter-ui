@@ -3,9 +3,9 @@
 
 #include <QObject>
 #include <QImage>
-#include <QThread>
 #include <QMutex>
 #include <QTimer>
+#include <QDir>
 #include <opencv2/opencv.hpp>
 
 class LogoDetector : public QObject {
