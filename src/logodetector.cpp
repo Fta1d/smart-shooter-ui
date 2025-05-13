@@ -59,9 +59,9 @@ void LogoDetector::setLogoTemplate(const QString &logoPath) {
 
     cv::cvtColor(logo, logoTemplate, cv::COLOR_BGR2GRAY);
 
-    qDebug() << "Logo template loaded successfully. Size: " + 
-                 QString::number(logoTemplate.cols) + "x" + 
-                 QString::number(logoTemplate.rows);
+    // qDebug() << "Logo template loaded successfully. Size: " + 
+    //              QString::number(logoTemplate.cols) + "x" + 
+    //              QString::number(logoTemplate.rows);
 }
 
 void LogoDetector::startDetection() {
@@ -117,8 +117,6 @@ void LogoDetector::processFrame(const QImage &frame) {
     double minVal, maxVal;
     cv::Point minLoc, maxLoc;
     cv::minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc);
-
-    qDebug() << QString("%1 | %2").arg(maxVal).arg(threshold);
 
     if (maxVal >= threshold) {
         emit logoDetected();

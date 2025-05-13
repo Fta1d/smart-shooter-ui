@@ -13,6 +13,7 @@
 #include <QPixmapCache>
 #include <QApplication>
 
+#include <malloc.h>
 #include "inc/videolabel.h"
 
 // Forward declaration
@@ -83,6 +84,7 @@ class MainWindow : public QMainWindow {
         bool currentActiveValue;
         bool isFullScreen;
         bool isCleaningMemory;
+        bool detection;
 
     public:
         VideoLabel *label;
@@ -128,9 +130,10 @@ class MainWindow : public QMainWindow {
         void closeEvent(QCloseEvent *event);
         void logoDetectionToggled(bool checked);
         void clearFramesButtonClicked();
+        void enterFullscreen();
+        void exitFullscreen();
         
 
     protected:
-        void keyPressEvent(QKeyEvent *event) override;
         bool eventFilter(QObject *watched, QEvent *event) override;
 };

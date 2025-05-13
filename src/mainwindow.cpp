@@ -53,7 +53,7 @@ QVBoxLayout* MainWindow::createLogoDetectionLayout() {
     logoDetectionEnabled = new QCheckBox("Enable successful shot save");
     logoDetectionEnabled->setChecked(false);
 
-    clearFramesButton = new QPushButton("Clear Saved Frames");
+    clearFramesButton = new QPushButton("Clear Cache");
 
     logoDetectionLayout->addWidget(clearFramesButton);
     logoDetectionLayout->addWidget(logoDetectionEnabled);
@@ -333,9 +333,11 @@ void MainWindow::connectButtonClicked() {
 
 void MainWindow::logoDetectionToggled(bool checked) {
     if (checked) {
+        detection = true;
         emit startLogoDetection();
         logMessage("Logo detection enabled");
     } else {
+        detection = false;
         emit stopLogoDetection();
         logMessage("Logo detection disabled");
     }
@@ -355,6 +357,7 @@ void MainWindow::clearFramesButtonClicked() {
     QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     
     frameIndex = 0;
+    malloc_trim(0);
     logMessage("All saved frames cleared and memory freed");
 }
 
@@ -380,8 +383,6 @@ void MainWindow::autoSaveFrame() {
 
         desiredFramesView->insertItem(frameIndex++, item);
         desiredFramesView->scrollToItem(item);
-        
-        logMessage("Logo detected - Frame saved automatically");
 
         labelPixmap = QPixmap();
     }
@@ -417,53 +418,64 @@ void MainWindow::logError(const QString &errorMessage) {
     log->appendPlainText("ERROR: " + errorMessage);
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *event) {
-    if (event->key() == Qt::Key_F) {
-        if (!isFullScreen) {
 
-            label->vidStreamLabel->removeEventFilter(this);
-            label->vidStreamLabel->setParent(nullptr);
-            label->vidStreamLabel->setWindowFlags(Qt::Window);
-            label->vidStreamLabel->installEventFilter(this);
-
-            label->vidStreamLabel->showFullScreen();
-            label->vidStreamLabel->setFocus(Qt::OtherFocusReason);
-
-            isFullScreen = true;
-        }
-    }
-}
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
-    if (watched == label->vidStreamLabel && event->type() == QEvent::KeyPress) {
+    if (!isFullScreen && event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_F) {
+            enterFullscreen();
+            return true;  
+        }
+    }
+
+    if (isFullScreen && watched == label->vidStreamLabel && event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_F || keyEvent->key() == Qt::Key_Escape) {
-
-            label->vidStreamLabel->setWindowFlags(Qt::Widget);
-            label->vidStreamLabel->hide();
-            label->vidStreamLabel->setParent(nullptr); 
-            label->vidStreamLabel->setParent(label);   
-
-            QWidget *topWidget = centralWidget->findChildren<QWidget*>().at(0);
-            QLayout *topLayout = topWidget->layout();
-            if (topLayout) {
-                QHBoxLayout *hLayout = qobject_cast<QHBoxLayout *>(topLayout);
-                if (hLayout) {
-                    hLayout->insertWidget(0, label->vidStreamLabel);
-                }
-            }
-
-            label->vidStreamLabel->setMinimumSize(800, 600);
-            label->vidStreamLabel->setAlignment(Qt::AlignCenter);
-            label->vidStreamLabel->show();
-            
-            isFullScreen = false;
-            
-            return true;
+            exitFullscreen();
+            return true; 
         }
     }
     
     return QMainWindow::eventFilter(watched, event);
+}
+
+void MainWindow::enterFullscreen() {
+    if (isFullScreen) return;
+    
+    label->vidStreamLabel->removeEventFilter(this);
+    label->vidStreamLabel->setParent(nullptr);
+    label->vidStreamLabel->setWindowFlags(Qt::Window);
+    label->vidStreamLabel->installEventFilter(this);
+    
+    label->vidStreamLabel->showFullScreen();
+    label->vidStreamLabel->activateWindow();
+    label->vidStreamLabel->setFocus(Qt::ActiveWindowFocusReason);
+    
+    isFullScreen = true;
+}
+
+void MainWindow::exitFullscreen() {
+    if (!isFullScreen) return;
+    
+    label->vidStreamLabel->hide();
+    label->vidStreamLabel->setWindowFlags(Qt::Widget);
+    
+    QWidget *topWidget = centralWidget->findChildren<QWidget*>().at(0);
+    QLayout *topLayout = topWidget->layout();
+    if (topLayout) {
+        QHBoxLayout *hLayout = qobject_cast<QHBoxLayout*>(topLayout);
+        if (hLayout) {
+            hLayout->insertWidget(0, label->vidStreamLabel, 2);
+        }
+    }
+    
+    label->vidStreamLabel->setMinimumSize(800, 600);
+    label->vidStreamLabel->setAlignment(Qt::AlignCenter);
+    label->vidStreamLabel->show();
+    
+    isFullScreen = false;
+    this->activateWindow();
 }
 
 void MainWindow::setupMemoryManagement() {
@@ -492,6 +504,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     currentActiveValue = false;
     isFullScreen = false;
     isCleaningMemory = false;
+    detection = false;
 
     frameHeight = 640;
     frameWidth = 640;
@@ -501,6 +514,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     label = new VideoLabel();
 
     setupMemoryManagement();
+
+    qApp->installEventFilter(this);
 
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 }
