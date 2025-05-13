@@ -275,48 +275,43 @@ void MainWindow::updateYSlider() {
 }
 
 void MainWindow::stateButtonClicked(bool checked) {
-    QMutexLocker locker(&log_mutex);
-
     // Update active state
     currentActiveValue = checked;
     emit updateActiveValue(checked);
     
     if (checked) {
-        log->appendPlainText("State: activated");
+        logMessage("State: activated");
     } else {
-        log->appendPlainText("State: deactivated");
+        logMessage("State: deactivated");
     }
 }
 
-void MainWindow::shotButtonClicked() {
-    QMutexLocker locker(&log_mutex);
-    
+void MainWindow::shotButtonClicked() { 
     // Set shot value to true
     currentShotValue = true;
     emit updateShotValue(true);
-    log->appendPlainText("Shot fired!");
+    logMessage("Shot fired!");
     
     // Reset shot value to false after a short delay
     QTimer::singleShot(10, [this]() {
         currentShotValue = false;
         emit updateShotValue(false);
-        QMutexLocker locker(&log_mutex);
-        log->appendPlainText("Shot reset");
+        logMessage("Shot reset");
     });
 }
 
 void MainWindow::connectButtonClicked() {
-    QMutexLocker locker(&log_mutex);
+    // QMutexLocker locker(&log_mutex);
     QString address = addressLineEdit->text();
     QStringList addressPortList = address.split(':');
 
     if (!address.isEmpty()) {
         if (udpConnected) {
-            log->appendPlainText("UDP already connected!");
+            logMessage("UDP already connected!");
             return;
         }
 
-        log->appendPlainText("Connecting UDP to: " + address);
+        logMessage("Connecting UDP to: " + address);
         
         // Set destination and start sending
         emit updateXValue(320);
@@ -327,12 +322,12 @@ void MainWindow::connectButtonClicked() {
         
         // Start GStreamer if not already running
         if (!gstRunning) {
-            log->appendPlainText("Starting video stream from: " + QStringLiteral("5060"));
+            logMessage("Starting video stream from: " + QStringLiteral("5060"));
             gstRunning = true;
             emit startGstProcess();
         }
     } else {
-        log->appendPlainText("Error: Address field is empty");
+        logMessage("Error: Address field is empty");
     }
 }
 
@@ -347,25 +342,42 @@ void MainWindow::logoDetectionToggled(bool checked) {
 }
 
 void MainWindow::clearFramesButtonClicked() {
-    desiredFramesView->clear();
+    QListWidgetItem *item;
+
+    while ((item = desiredFramesView->item(0)) != nullptr) {
+        QIcon icon = item->icon();
+        icon = QIcon(); 
+        
+        delete desiredFramesView->takeItem(0); 
+    }
+
+    QPixmapCache::clear();
+
+    QApplication::processEvents();
+    QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    
     frameIndex = 0;
-    logMessage("All saved frames cleared");
+    logMessage("All saved frames cleared and memory freed");
 }
 
 void MainWindow::autoSaveFrame() {
     QMutexLocker locker(&label_mutex);
-    QListWidgetItem *item = new QListWidgetItem();
-
     QPixmap labelPixmap = label->vidStreamLabel->pixmap();
 
     if (!labelPixmap.isNull()) {
-        QIcon icon(labelPixmap);
+        QPixmap optimizedPixmap = labelPixmap.scaled(350, 350, Qt::KeepAspectRatio, 
+                                                   Qt::SmoothTransformation);
+        
+        QListWidgetItem *item = new QListWidgetItem();
+        QIcon icon(optimizedPixmap);
         item->setIcon(icon);
 
         desiredFramesView->insertItem(frameIndex++, item);
         desiredFramesView->scrollToItem(item);
         
         logMessage("Logo detected - Frame saved automatically");
+
+        labelPixmap = QPixmap();
     }
 }
 
@@ -388,7 +400,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     QMainWindow::closeEvent(event);
 }
 
-// UdpCmdSender log slots
+// Log slots
 void MainWindow::logMessage(const QString &message) {
     QMutexLocker locker(&log_mutex);
     log->appendPlainText(message);
@@ -448,6 +460,13 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
     return QMainWindow::eventFilter(watched, event);
 }
 
+void MainWindow::setupMemoryManagement() {
+    QTimer *cacheCleanTimer = new QTimer(this);
+    connect(cacheCleanTimer, &QTimer::timeout, this, &MainWindow::clearFramesButtonClicked);
+
+    cacheCleanTimer->start(60000);
+}
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     xSlider = nullptr;
     ySlider = nullptr;
@@ -466,6 +485,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     currentShotValue = false;
     currentActiveValue = false;
     isFullScreen = false;
+    isCleaningMemory = false;
 
     frameHeight = 640;
     frameWidth = 640;
@@ -473,6 +493,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     resize(1160, 1000);
     label = new VideoLabel();
+
+    setupMemoryManagement();
 
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 }

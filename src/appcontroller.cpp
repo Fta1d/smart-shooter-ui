@@ -44,9 +44,9 @@ void AppController::logoDetection() {
 
 
 AppController::AppController() {
+    logoDetector = new LogoDetector();
     gst = new GstControl();
     cmdSender = new UdpCmdSender();
-    logoDetector = new LogoDetector();
     window = new MainWindow();
 }
 

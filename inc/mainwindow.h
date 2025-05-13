@@ -10,6 +10,8 @@
 #include <QMutexLocker>
 #include <QListWidget>
 #include <QCheckBox>
+#include <QPixmapCache>
+#include <QApplication>
 
 #include "inc/videolabel.h"
 
@@ -23,6 +25,7 @@ class MainWindow : public QMainWindow {
     private:
         void setupTopLayout(QWidget *parent);
         void setupBottomLayout(QWidget *parent);
+        void setupMemoryManagement();
         void applyDeltaStyle();
 
         QHBoxLayout* createXSliderLayout();
@@ -79,6 +82,7 @@ class MainWindow : public QMainWindow {
         bool currentShotValue;
         bool currentActiveValue;
         bool isFullScreen;
+        bool isCleaningMemory;
 
     public:
         VideoLabel *label;

@@ -2,7 +2,7 @@
 
 LogoDetector::LogoDetector(QObject *parent) : QObject(parent) {
     running = false;
-    threshold = 0.7;   
+    threshold = 0.85;   
     logoSize = 25;       
     checkFrequency = 1;  
 
@@ -49,7 +49,7 @@ void LogoDetector::setLogoTemplate(const QString &logoPath) {
     cv::Mat logo = cv::imread(logoPath.toStdString());
     
     if (logo.empty()) {
-        emit message("Error: Cannot load logo image from " + logoPath);
+        qDebug() << "Error: Cannot load logo image from " + logoPath;
         return;
     }
 
@@ -58,10 +58,10 @@ void LogoDetector::setLogoTemplate(const QString &logoPath) {
     }
 
     cv::cvtColor(logo, logoTemplate, cv::COLOR_BGR2GRAY);
-    
-    emit message("Logo template loaded successfully. Size: " + 
+
+    qDebug() << "Logo template loaded successfully. Size: " + 
                  QString::number(logoTemplate.cols) + "x" + 
-                 QString::number(logoTemplate.rows));
+                 QString::number(logoTemplate.rows);
 }
 
 void LogoDetector::startDetection() {
@@ -117,6 +117,8 @@ void LogoDetector::processFrame(const QImage &frame) {
     double minVal, maxVal;
     cv::Point minLoc, maxLoc;
     cv::minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc);
+
+    qDebug() << QString("%1 | %2").arg(maxVal).arg(threshold);
 
     if (maxVal >= threshold) {
         emit logoDetected();
