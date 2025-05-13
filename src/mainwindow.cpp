@@ -351,8 +351,6 @@ void MainWindow::clearFramesButtonClicked() {
         delete desiredFramesView->takeItem(0); 
     }
 
-    QPixmapCache::clear();
-
     QApplication::processEvents();
     QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     
@@ -361,7 +359,15 @@ void MainWindow::clearFramesButtonClicked() {
 }
 
 void MainWindow::autoSaveFrame() {
+    const int MAX_FRAMES = 50;
+
     QMutexLocker locker(&label_mutex);
+
+    if (desiredFramesView->count() >= MAX_FRAMES) {
+        delete desiredFramesView->takeItem(0);
+        frameIndex--; 
+    }
+
     QPixmap labelPixmap = label->vidStreamLabel->pixmap();
 
     if (!labelPixmap.isNull()) {
@@ -464,7 +470,7 @@ void MainWindow::setupMemoryManagement() {
     QTimer *cacheCleanTimer = new QTimer(this);
     connect(cacheCleanTimer, &QTimer::timeout, this, &MainWindow::clearFramesButtonClicked);
 
-    cacheCleanTimer->start(60000);
+    cacheCleanTimer->start(120000);
 }
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
