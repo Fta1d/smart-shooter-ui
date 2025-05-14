@@ -52,7 +52,7 @@ AppController::AppController() {
 
 AppController::~AppController() {
     // Stop and clean up GStreamer
-    if (gst && gst->isRunning()) {
+    if (gst) {
         gst->stopPipeline();
     }
     

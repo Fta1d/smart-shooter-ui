@@ -27,8 +27,7 @@ class AppController : public QObject {
             if (gst && gst->isRunning()) {
                 gst->stopPipeline();
             }
-            
-            // Stop the command sender before quitting
+
             if (cmdSender) {
                 cmdSender->stopSending();
             }

@@ -4,7 +4,6 @@
 
 void MainWindow::initMainWindow() {
     centralWidget = new QWidget(this);
-    // centralWidget->setStyleSheet("background-color:rgb(0, 9, 51);");
 
     QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
 
@@ -39,12 +38,28 @@ void MainWindow::setupTopLayout(QWidget *parent) {
     verticalRight->addLayout(createStateButtonLayout());
     verticalRight->addWidget(logButton);
     verticalRight->addLayout(createLogoDetectionLayout());
+    verticalRight->addLayout(createModeSelectionLayout());
     verticalRight->addStretch();
     verticalRight->addLayout(createLogoLayout());
     verticalRight->addStretch();
     verticalRight->addLayout(createConnectionLayout());
     
     topLayout->addLayout(verticalRight, 1);
+}
+
+QHBoxLayout* MainWindow::createModeSelectionLayout() {
+    QHBoxLayout *modeSelectionLayout = new QHBoxLayout();
+    QLabel *label = new QLabel("Select mode:");
+
+    modeSelectBox = new QComboBox();
+    modeSelectBox->addItem("Manual", QVariant(1));
+    modeSelectBox->addItem("Semi auto", QVariant(2));
+    modeSelectBox->addItem("Auto", QVariant(3));
+
+    modeSelectionLayout->addWidget(label);
+    modeSelectionLayout->addWidget(modeSelectBox, 1);
+    
+    return modeSelectionLayout;
 }
 
 QVBoxLayout* MainWindow::createLogoDetectionLayout() {
@@ -102,7 +117,7 @@ QHBoxLayout* MainWindow::createConnectionLayout() {
     addressLineEdit = new QLineEdit();
     addressLineEdit->setPlaceholderText("Enter address");
     addressLineEdit->setText("127.0.0.1:5050"); // Default to localhost
-    addressLineEdit->setEnabled(false);
+    addressLineEdit->setEnabled(true);
 
     QRegularExpression regExp("^[0-9.:]+$");
     QRegularExpressionValidator *validator = new QRegularExpressionValidator(regExp, this);
@@ -167,6 +182,49 @@ void MainWindow::initializeDesiredFramesViewWidget() {
     desiredFramesView = new QListWidget();
     desiredFramesView->setFlow(QListView::LeftToRight);
     desiredFramesView->setIconSize(QSize(350, 350));
+    desiredFramesView->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    connect(desiredFramesView, &QListWidget::customContextMenuRequested, 
+            this, [this](const QPoint &pos) {
+        QListWidgetItem *item = desiredFramesView->itemAt(pos);
+        if (item) {
+            QMenu contextMenu(tr("Frame Context Menu"), this);
+            
+            QAction *openAction = new QAction(tr("Open Image"), this);
+            QAction *deleteAction = new QAction(tr("Delete Image"), this);
+            QAction *copyPathAction = new QAction(tr("Copy File Path"), this);
+            
+            connect(openAction, &QAction::triggered, [this, item]() {
+                onFrameItemDoubleClicked(item);
+            });
+            
+            connect(deleteAction, &QAction::triggered, [this, item]() {
+                QString filePath = item->data(Qt::UserRole).toString();
+                if (!filePath.isEmpty() && QFile::exists(filePath)) {
+                    if (QFile::remove(filePath)) {
+                        delete desiredFramesView->takeItem(desiredFramesView->row(item));
+                        logMessage("File deleted: " + filePath);
+                    } else {
+                        logError("Failed to delete file: " + filePath);
+                    }
+                }
+            });
+            
+            connect(copyPathAction, &QAction::triggered, [this, item]() {
+                QString filePath = item->data(Qt::UserRole).toString();
+                if (!filePath.isEmpty()) {
+                    QApplication::clipboard()->setText(filePath);
+                    logMessage("File path copied to clipboard");
+                }
+            });
+            
+            contextMenu.addAction(openAction);
+            contextMenu.addAction(deleteAction);
+            contextMenu.addAction(copyPathAction);
+            
+            contextMenu.exec(desiredFramesView->mapToGlobal(pos));
+        }
+    });
 }
 
 void MainWindow::initializeButtons() {
@@ -230,6 +288,13 @@ void MainWindow::connectSignalsAndSlots() {
 
     connect(logoDetectionEnabled, &QCheckBox::toggled, this, &MainWindow::logoDetectionToggled);
     connect(clearFramesButton, &QPushButton::clicked, this, &MainWindow::clearFramesButtonClicked);
+
+    connect(desiredFramesView, &QListWidget::itemDoubleClicked, this, &MainWindow::onFrameItemDoubleClicked);
+
+    connect(modeSelectBox, &QComboBox::currentIndexChanged, this, [this]() {
+        QVariant data = modeSelectBox->currentData();
+        emit updateMode(data.toInt());
+    });
 }
 
 void MainWindow::setUdpCmdSender(UdpCmdSender *sender) {
@@ -246,6 +311,7 @@ void MainWindow::setUdpCmdSender(UdpCmdSender *sender) {
     connect(this, &MainWindow::updateYValue, cmdSender, &UdpCmdSender::setYValue, Qt::QueuedConnection);
     connect(this, &MainWindow::updateShotValue, cmdSender, &UdpCmdSender::setShotValue, Qt::QueuedConnection);
     connect(this, &MainWindow::updateActiveValue, cmdSender, &UdpCmdSender::setActiveValue, Qt::QueuedConnection);
+    connect(this, &MainWindow::updateMode, cmdSender, &UdpCmdSender::setMode, Qt::QueuedConnection);
 }
 
 void MainWindow::setLogoDetector(LogoDetector *detector) {
@@ -344,45 +410,110 @@ void MainWindow::logoDetectionToggled(bool checked) {
 }
 
 void MainWindow::clearFramesButtonClicked() {
-    QListWidgetItem *item;
-
-    while ((item = desiredFramesView->item(0)) != nullptr) {
-        QIcon icon = item->icon();
-        icon = QIcon(); 
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this, "Clear Frames",
+        "Do you want to clear only thumbnails or delete all saved files as well?",
+        QMessageBox::Cancel | QMessageBox::No | QMessageBox::Yes
+    );
+    
+    if (reply == QMessageBox::Cancel) {
+        return;
+    }
+    
+    bool deleteFiles = (reply == QMessageBox::Yes);
+    
+    if (deleteFiles) {
+        QString shootsDir = QDir::currentPath() + "/shoots";
+        QDir dir(shootsDir);
         
-        delete desiredFramesView->takeItem(0); 
+        if (dir.exists()) {
+            QStringList filters;
+            filters << "*.png";
+            QStringList files = dir.entryList(filters, QDir::Files);
+            
+            int deletedCount = 0;
+            int failedCount = 0;
+
+            foreach (const QString &file, files) {
+                QString fullPath = shootsDir + "/" + file;
+                bool removed = QFile::remove(fullPath);
+                
+                if (removed) {
+                    deletedCount++;
+                } else {
+                    failedCount++;
+                    logError("Failed to delete file: " + fullPath);
+                }
+            }
+            
+            logMessage(QString("Deleted %1 files from shoots folder. Failed: %2")
+                      .arg(deletedCount)
+                      .arg(failedCount));
+        } else {
+            logMessage("Shoots directory does not exist.");
+        }
     }
 
+    desiredFramesView->clear();
+
+    QPixmapCache::clear();
     QApplication::processEvents();
     QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     
-    frameIndex = 0;
+#ifdef Q_OS_LINUX
     malloc_trim(0);
-    logMessage("All saved frames cleared and memory freed");
+#endif
+    
+    frameIndex = 0;
+    logMessage("All thumbnails cleared and memory freed");
 }
 
 void MainWindow::autoSaveFrame() {
-    const int MAX_FRAMES = 50;
-
+    const int MAX_FRAMES_DISPLAYED = 50;
+    
     QMutexLocker locker(&label_mutex);
-
-    if (desiredFramesView->count() >= MAX_FRAMES) {
-        delete desiredFramesView->takeItem(0);
-        frameIndex--; 
-    }
-
     QPixmap labelPixmap = label->vidStreamLabel->pixmap();
 
     if (!labelPixmap.isNull()) {
-        QPixmap optimizedPixmap = labelPixmap.scaled(350, 350, Qt::KeepAspectRatio, 
-                                                   Qt::SmoothTransformation);
-        
-        QListWidgetItem *item = new QListWidgetItem();
-        QIcon icon(optimizedPixmap);
-        item->setIcon(icon);
+        QString shootsDir = QDir::currentPath() + "/shoots";
+        QDir dir(shootsDir);
+        if (!dir.exists()) {
+            bool created = dir.mkpath(".");
+            if (created) {
+                logMessage("Created directory for frames: " + shootsDir);
+            } else {
+                logError("Failed to create directory for frames: " + shootsDir);
+                return;
+            }
+        }
 
-        desiredFramesView->insertItem(frameIndex++, item);
-        desiredFramesView->scrollToItem(item);
+        QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss_zzz");
+        QString filename = QString("shot_%1_%2.png").arg(frameIndex).arg(timestamp);
+        QString fullPath = shootsDir + "/" + filename;
+
+        if (labelPixmap.save(fullPath, "PNG")) {
+            logMessage("Frame saved to: " + fullPath);
+
+            QPixmap thumbnailPixmap = labelPixmap.scaled(350, 350, Qt::KeepAspectRatio, 
+                                                      Qt::SmoothTransformation);
+
+            if (desiredFramesView->count() >= MAX_FRAMES_DISPLAYED) {
+                QListWidgetItem *oldItem = desiredFramesView->takeItem(0);
+                delete oldItem;
+            }
+
+            QListWidgetItem *item = new QListWidgetItem();
+            QIcon icon(thumbnailPixmap);
+            item->setIcon(icon);
+
+            item->setData(Qt::UserRole, fullPath);
+            item->setToolTip(fullPath); 
+
+            desiredFramesView->insertItem(frameIndex++, item);
+            desiredFramesView->scrollToItem(item);
+        } else {
+            logError("Failed to save frame to: " + fullPath);
+        }
 
         labelPixmap = QPixmap();
     }
@@ -436,6 +567,21 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
             return true; 
         }
     }
+
+    if (event->type() == QEvent::Resize) {
+        QLabel *imageLabel = qobject_cast<QLabel*>(watched);
+        if (imageLabel && imageLabel->property("isImageViewer").toBool()) {
+            QPixmap originalPixmap = imageLabel->property("originalPixmap").value<QPixmap>();
+            if (!originalPixmap.isNull()) {
+                imageLabel->setPixmap(originalPixmap.scaled(
+                    imageLabel->size(),
+                    Qt::KeepAspectRatio,
+                    Qt::SmoothTransformation
+                ));
+                return true;
+            }
+        }
+    }
     
     return QMainWindow::eventFilter(watched, event);
 }
@@ -446,6 +592,7 @@ void MainWindow::enterFullscreen() {
     label->vidStreamLabel->removeEventFilter(this);
     label->vidStreamLabel->setParent(nullptr);
     label->vidStreamLabel->setWindowFlags(Qt::Window);
+    label->vidStreamLabel->setAttribute(Qt::WA_DeleteOnClose);
     label->vidStreamLabel->installEventFilter(this);
     
     label->vidStreamLabel->showFullScreen();
@@ -478,9 +625,58 @@ void MainWindow::exitFullscreen() {
     this->activateWindow();
 }
 
+void MainWindow::onFrameItemDoubleClicked(QListWidgetItem *item) {
+    if (item) {
+        QString filePath = item->data(Qt::UserRole).toString();
+        if (!filePath.isEmpty() && QFile::exists(filePath)) {
+
+            QPixmap pixmap(filePath);
+            if (pixmap.isNull()) {
+                logError("Failed to load image: " + filePath);
+                return;
+            }
+
+            QLabel *imageLabel = new QLabel();
+            imageLabel->setMinimumSize(800, 600);
+            imageLabel->setAlignment(Qt::AlignCenter);
+
+            imageLabel->setProperty("originalPixmap", QVariant::fromValue(pixmap));
+            imageLabel->setProperty("isImageViewer", true);
+
+            imageLabel->setPixmap(pixmap.scaled(imageLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+
+            imageLabel->setWindowFlags(Qt::Window);
+            imageLabel->setWindowTitle(QFileInfo(filePath).fileName());
+            imageLabel->setAttribute(Qt::WA_DeleteOnClose);
+
+            imageLabel->installEventFilter(this);
+
+            imageLabel->show();
+            imageLabel->activateWindow();
+            
+            QObject::connect(imageLabel, &QLabel::destroyed, [=]() {
+                // Cleanup
+            });
+        } else {
+            logError("Cannot open file (doesn't exist): " + filePath);
+        }
+    }
+}
+
 void MainWindow::setupMemoryManagement() {
     QTimer *cacheCleanTimer = new QTimer(this);
-    connect(cacheCleanTimer, &QTimer::timeout, this, &MainWindow::clearFramesButtonClicked);
+
+    connect(cacheCleanTimer, &QTimer::timeout, this, [this]() {
+        // desiredFramesView->clear();
+        QPixmapCache::clear();
+        QApplication::processEvents();
+        
+#ifdef Q_OS_LINUX
+        malloc_trim(0);
+#endif
+        
+        logMessage("Auto memory cleanup: thumbnails cleared and memory freed");
+    });
 
     cacheCleanTimer->start(120000);
 }
@@ -493,6 +689,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     addressLineEdit = nullptr;
     connectButton = nullptr;
     shotButton = nullptr;
+    modeSelectBox = nullptr;
     gstRunning = false;
     udpConnected = false;
     cmdSender = nullptr;

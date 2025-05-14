@@ -1,3 +1,6 @@
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+
 #include <QMainWindow>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -12,6 +15,11 @@
 #include <QCheckBox>
 #include <QPixmapCache>
 #include <QApplication>
+#include <QDir>
+#include <QMessageBox>
+#include <QMenu>
+#include <QClipboard>
+#include <QComboBox>
 
 #include <malloc.h>
 #include "inc/videolabel.h"
@@ -35,6 +43,8 @@ class MainWindow : public QMainWindow {
         QHBoxLayout* createConnectionLayout();
         QHBoxLayout* createLogoLayout();
         QVBoxLayout* createLogoDetectionLayout();
+        QHBoxLayout* createModeSelectionLayout();
+
         void initializeLogWidget();
         void initializeDesiredFramesViewWidget();
         void initializeButtons();
@@ -43,7 +53,9 @@ class MainWindow : public QMainWindow {
         void initializeLineEditX(QLineEdit *lineEdit);
         void initializeLineEditY(QLineEdit *lineEdit);
         void initializeLineEdit(QLineEdit *lineEdit);
+
         void connectSignalsAndSlots();
+        void setupFrameViewerConnections();
 
         // QWidget *topWidget = nullptr;
         // QHBoxLayout *topLayout = nullptr;
@@ -62,6 +74,7 @@ class MainWindow : public QMainWindow {
         QListWidget *desiredFramesView;
         QCheckBox *logoDetectionEnabled;
         QPushButton *clearFramesButton;
+        QComboBox *modeSelectBox;
 
         bool gstRunning;
         bool udpConnected;
@@ -107,6 +120,7 @@ class MainWindow : public QMainWindow {
         void updateYValue(int value);
         void updateShotValue(bool value);
         void updateActiveValue(bool value);
+        void updateMode(int value);
 
         void startLogoDetection();
         void stopLogoDetection();
@@ -132,8 +146,11 @@ class MainWindow : public QMainWindow {
         void clearFramesButtonClicked();
         void enterFullscreen();
         void exitFullscreen();
+        void onFrameItemDoubleClicked(QListWidgetItem *item);
         
 
     protected:
         bool eventFilter(QObject *watched, QEvent *event) override;
 };
+
+#endif // MAINWINDOW_H
