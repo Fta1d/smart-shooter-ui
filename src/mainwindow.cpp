@@ -14,20 +14,24 @@ void MainWindow::initMainWindow() {
     initializeLogWidget();
     setupBottomLayout(bottomWidget);
 
-    QLabel *companyName = new QLabel("UKR SMART TECH");
+    QLabel *companyName = new QLabel();
     companyName->setAlignment(Qt::AlignCenter);
 
-    QFont font = companyName->font();
-    font.setBold(true);    
-    font.setFamily("Arial"); 
-    companyName->setFont(font);
-
-    companyName->setStyleSheet("color: #0057b7; font-size: 20px; background-color: transparent; padding: 5px;");
+    QPixmap textPixmap = createOutlinedTextPixmap(
+        "UKR SMART TECH",    // Текст
+        22,                  // Розмір шрифту
+        QColor("#0057b7"),   // Колір тексту
+        Qt::white,           // Колір обводки
+        5                  // Товщина обводки
+    );
+    
+    companyName->setPixmap(textPixmap);
+    companyName->setContentsMargins(0, -20, 0, -30);
 
     QGraphicsDropShadowEffect *shadowEffect = new QGraphicsDropShadowEffect(this);
-    shadowEffect->setBlurRadius(4); 
-    shadowEffect->setColor(QColor(0, 0, 0, 160)); 
-    shadowEffect->setOffset(2, 2);  
+    shadowEffect->setBlurRadius(4);
+    shadowEffect->setColor(QColor(0, 0, 0, 160));
+    shadowEffect->setOffset(2, 2);
     companyName->setGraphicsEffect(shadowEffect);
 
     mainLayout->addWidget(companyName);
@@ -765,4 +769,34 @@ void MainWindow::applyDeltaStyle() {
             )");
         }
     }
+}
+
+QPixmap MainWindow::createOutlinedTextPixmap(const QString &text, int fontSize, const QColor &textColor, 
+    const QColor &outlineColor, qreal outlineWidth) {
+    QPixmap pixmap(600, 80);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+
+    QFont font("Monaco", fontSize, QFont::Bold);
+    painter.setFont(font);
+
+    QFontMetrics fm(font);
+    QRect textRect = fm.boundingRect(0, 0, pixmap.width(), pixmap.height(), Qt::AlignCenter, text);
+
+    QPainterPath path;
+    path.addText(pixmap.width()/2 - textRect.width()/2, 
+    pixmap.height()/2 + fm.ascent()/2 - fm.descent(), 
+    font, text);
+
+    painter.setPen(QPen(outlineColor, outlineWidth));
+    painter.drawPath(path);
+
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(textColor);
+    painter.drawPath(path);
+
+    return pixmap;
 }

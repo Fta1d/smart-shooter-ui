@@ -21,6 +21,8 @@
 #include <QClipboard>
 #include <QComboBox>
 #include <QGraphicsDropShadowEffect>
+#include <QPainter>
+#include <QPainterPath>
 
 #include <malloc.h>
 #include "inc/videolabel.h"
@@ -54,6 +56,9 @@ class MainWindow : public QMainWindow {
         void initializeLineEditX(QLineEdit *lineEdit);
         void initializeLineEditY(QLineEdit *lineEdit);
         void initializeLineEdit(QLineEdit *lineEdit);
+
+        QPixmap createOutlinedTextPixmap(const QString &text, int fontSize, const QColor &textColor, 
+            const QColor &outlineColor, qreal outlineWidth = 1.5);
 
         void connectSignalsAndSlots();
         void setupFrameViewerConnections();
