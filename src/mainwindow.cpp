@@ -14,6 +14,23 @@ void MainWindow::initMainWindow() {
     initializeLogWidget();
     setupBottomLayout(bottomWidget);
 
+    QLabel *companyName = new QLabel("UKR SMART TECH");
+    companyName->setAlignment(Qt::AlignCenter);
+
+    QFont font = companyName->font();
+    font.setBold(true);    
+    font.setFamily("Arial"); 
+    companyName->setFont(font);
+
+    companyName->setStyleSheet("color: #0057b7; font-size: 20px; background-color: transparent; padding: 5px;");
+
+    QGraphicsDropShadowEffect *shadowEffect = new QGraphicsDropShadowEffect(this);
+    shadowEffect->setBlurRadius(4); 
+    shadowEffect->setColor(QColor(0, 0, 0, 160)); 
+    shadowEffect->setOffset(2, 2);  
+    companyName->setGraphicsEffect(shadowEffect);
+
+    mainLayout->addWidget(companyName);
     mainLayout->addWidget(topWidget, 2); 
     mainLayout->addWidget(bottomWidget, 1);
 

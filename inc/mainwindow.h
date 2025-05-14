@@ -20,6 +20,7 @@
 #include <QMenu>
 #include <QClipboard>
 #include <QComboBox>
+#include <QGraphicsDropShadowEffect>
 
 #include <malloc.h>
 #include "inc/videolabel.h"
