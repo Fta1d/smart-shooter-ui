@@ -127,6 +127,7 @@ void UdpCmdSender::prepareAndSendMessage() {
     packer.pack(yValue);
     packer.pack(shotValue);
     packer.pack(activeValue);
+    // packer.pack(mode);
     
     // Send the packed message
     qint64 bytesSent = socket->writeDatagram(
