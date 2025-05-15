@@ -12,18 +12,26 @@ sudo apt install -y \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
     gstreamer1.0-plugins-ugly \
-    gstreamer1.0-libav
+    gstreamer1.0-libav \
+    gstreamer1.0-qt6
 
-echo "Встановлення runtime пакетів Qt..."
+echo "Встановлення runtime пакетів Qt6..."
 sudo apt install -y \
-    libqt5core5a \
-    libqt5gui5 \
-    libqt5widgets5 \
-    libqt5network5 \
-    libqt5dbus5
+    libqt6core6 \
+    libqt6gui6 \
+    libqt6widgets6 \
+    libqt6network6 \
+    libqt6dbus6
 
 echo "Встановлення runtime пакетів msgpack..."
 sudo apt install -y \
     libmsgpackc2
+
+echo "Встановлення runtime пакетів OpenCV..."
+sudo apt install -y \
+    libopencv-core4.5 \
+    libopencv-imgproc4.5 \
+    libopencv-highgui4.5 \
+    libopencv-videoio4.5
 
 echo "Готово! Всі необхідні runtime пакети було встановлено."
