@@ -785,11 +785,17 @@ void MainWindow::loadSettings() {
     savedX = qBound(0, savedX, frameWidth);
     savedY = qBound(0, savedY, frameHeight);
 
+    currentXValue = savedX;
+    currentYValue = savedY;
+
     xSlider->setValue(savedX);
     ySlider->setValue(savedY);
 
     updateXLineEdit();
     updateYLineEdit();
+
+    emit updateXValue(currentXValue);
+    emit updateYValue(currentYValue);
 }
 
 void MainWindow::saveSettings() {
