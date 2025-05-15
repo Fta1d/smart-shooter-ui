@@ -10,9 +10,9 @@ TEMPLATE = app
 SOURCES += ../src/*
 HEADERS += ../inc/*
 
-OBJECTS_DIR = build/obj
-MOC_DIR = build/moc
-UI_DIR = build/ui
-RCC_DIR = build/rcc
+OBJECTS_DIR = obj/
+MOC_DIR = moc/
+UI_DIR = ui/
+RCC_DIR = rcc/
 
 DESTDIR = ..
