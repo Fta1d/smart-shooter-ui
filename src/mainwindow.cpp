@@ -719,19 +719,19 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     udpConnected = false;
     cmdSender = nullptr;
     topWidgetRef = nullptr;
+
+    frameHeight = 640;
+    frameWidth = 640;
+    frameIndex = 0;
     
     // Initialize current values
-    currentXValue = 0;
-    currentYValue = 0;
+    currentXValue = frameWidth / 2;
+    currentYValue = frameHeight / 2;
     currentShotValue = false;
     currentActiveValue = false;
     isFullScreen = false;
     isCleaningMemory = false;
     detection = false;
-
-    frameHeight = 640;
-    frameWidth = 640;
-    frameIndex = 0;
 
     resize(1160, 1000);
     label = new VideoLabel();
