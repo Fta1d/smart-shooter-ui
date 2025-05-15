@@ -7,7 +7,8 @@ LogoDetector::LogoDetector(QObject *parent) : QObject(parent) {
     checkFrequency = 1;  
 
     QString appDir = QDir::currentPath();
-    QString logoPath = appDir + "/../logo25.jpg";
+    QString logoPath = appDir + QDir::separator() + "pic/logo25.jpg";
+
     emit message("Current directory: " + appDir);
     emit message("Looking for logo at: " + logoPath);   
 
