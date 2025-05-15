@@ -6,10 +6,8 @@ LogoDetector::LogoDetector(QObject *parent) : QObject(parent) {
     logoSize = 25;       
     checkFrequency = 1;  
 
-    QString appDir = QDir::currentPath();
-    QString logoPath = appDir + QDir::separator() + "pic/logo25.jpg";
+    QString logoPath = ":/pic/logo25.jpg";
 
-    emit message("Current directory: " + appDir);
     emit message("Looking for logo at: " + logoPath);   
 
     QFile file(logoPath);
@@ -47,22 +45,34 @@ cv::Mat LogoDetector::QImageToCvMat(const QImage &image) {
 }
 
 void LogoDetector::setLogoTemplate(const QString &logoPath) {
-    cv::Mat logo = cv::imread(logoPath.toStdString());
-    
-    if (logo.empty()) {
-        qDebug() << "Error: Cannot load logo image from " + logoPath;
-        return;
-    }
+    if (logoPath.startsWith(":")) {
+        QFile resourceFile(logoPath);
+        if (!resourceFile.open(QIODevice::ReadOnly)) {
+            qDebug() << "Error: Cannot open resource file" << logoPath;
+            return;
+        }
+        
+        QByteArray imageData = resourceFile.readAll();
+        resourceFile.close();
 
-    if (logoSize > 0 && (logo.cols != logoSize || logo.rows != logoSize)) {
-        cv::resize(logo, logo, cv::Size(logoSize, logoSize));
-    }
+        std::vector<uchar> buffer(imageData.begin(), imageData.end());
 
-    cv::cvtColor(logo, logoTemplate, cv::COLOR_BGR2GRAY);
+        cv::Mat logo = cv::imdecode(buffer, cv::IMREAD_COLOR);
+        
+        if (logo.empty()) {
+            qDebug() << "Error: Cannot decode image data from resource" << logoPath;
+            return;
+        }
 
-    // qDebug() << "Logo template loaded successfully. Size: " + 
-    //              QString::number(logoTemplate.cols) + "x" + 
-    //              QString::number(logoTemplate.rows);
+        if (logoSize > 0 && (logo.cols != logoSize || logo.rows != logoSize)) {
+            cv::resize(logo, logo, cv::Size(logoSize, logoSize));
+        }
+        
+        cv::cvtColor(logo, logoTemplate, cv::COLOR_BGR2GRAY);
+        
+        qDebug() << "Logo template loaded successfully from resource. Size:" 
+                 << logoTemplate.cols << "x" << logoTemplate.rows;
+    } 
 }
 
 void LogoDetector::startDetection() {

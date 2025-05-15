@@ -10,6 +10,8 @@ TEMPLATE = app
 SOURCES += ../src/*
 HEADERS += ../inc/*
 
+RESOURCES += resources.qrc
+
 OBJECTS_DIR = obj/
 MOC_DIR = moc/
 UI_DIR = ui/

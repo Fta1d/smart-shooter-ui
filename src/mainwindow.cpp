@@ -110,8 +110,7 @@ QHBoxLayout* MainWindow::createLogoLayout() {
     QHBoxLayout *logoLayout = new QHBoxLayout();
     QLabel *logoLabel = new QLabel();
 
-    QString appDir = QDir::currentPath();
-    QString logoPath = appDir + QDir::separator() + "pic/logo.jpg";
+    QString logoPath = ":/pic/logo.jpg";
 
     QPixmap pixmap(logoPath);
 
