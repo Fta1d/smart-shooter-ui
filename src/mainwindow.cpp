@@ -18,11 +18,11 @@ void MainWindow::initMainWindow() {
     companyName->setAlignment(Qt::AlignCenter);
 
     QPixmap textPixmap = createOutlinedTextPixmap(
-        "UKR SMART TECH",    // Текст
-        22,                  // Розмір шрифту
-        QColor("#0057b7"),   // Колір тексту
-        Qt::white,           // Колір обводки
-        5                  // Товщина обводки
+        "UKR SMART TECH",    // Text
+        22,                  // Font size
+        QColor("#0057b7"),   // Text color
+        Qt::white,           // Edge color
+        5                    // Edge thickness
     );
     
     companyName->setPixmap(textPixmap);
@@ -47,10 +47,11 @@ void MainWindow::initMainWindow() {
 }
 
 void MainWindow::setupTopLayout(QWidget *parent) {
+    topWidgetRef = parent; 
+
     QHBoxLayout *topLayout = new QHBoxLayout(parent);
     parent->setLayout(topLayout);
 
-    // label->vidStreamLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     topLayout->addWidget(label->vidStreamLabel, 2);
     
     QVBoxLayout *verticalRight = new QVBoxLayout();
@@ -573,19 +574,19 @@ void MainWindow::logError(const QString &errorMessage) {
 
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
-    if (!isFullScreen && event->type() == QEvent::KeyPress) {
+    if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        
         if (keyEvent->key() == Qt::Key_F) {
-            enterFullscreen();
-            return true;  
-        }
-    }
-
-    if (isFullScreen && watched == label->vidStreamLabel && event->type() == QEvent::KeyPress) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-        if (keyEvent->key() == Qt::Key_F || keyEvent->key() == Qt::Key_Escape) {
+            if (isFullScreen) {
+                exitFullscreen();
+            } else {
+                enterFullscreen();
+            }
+            return true;
+        } else if (isFullScreen && keyEvent->key() == Qt::Key_Escape) {
             exitFullscreen();
-            return true; 
+            return true;
         }
     }
 
@@ -629,12 +630,10 @@ void MainWindow::exitFullscreen() {
     label->vidStreamLabel->hide();
     label->vidStreamLabel->setWindowFlags(Qt::Widget);
     
-    QWidget *topWidget = centralWidget->findChildren<QWidget*>().at(0);
-    QLayout *topLayout = topWidget->layout();
-    if (topLayout) {
-        QHBoxLayout *hLayout = qobject_cast<QHBoxLayout*>(topLayout);
-        if (hLayout) {
-            hLayout->insertWidget(0, label->vidStreamLabel, 2);
+    if (topWidgetRef && topWidgetRef->layout()) {
+        QHBoxLayout *topLayout = qobject_cast<QHBoxLayout*>(topWidgetRef->layout());
+        if (topLayout) {
+            topLayout->insertWidget(0, label->vidStreamLabel, 2);
         }
     }
     
@@ -714,6 +713,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     gstRunning = false;
     udpConnected = false;
     cmdSender = nullptr;
+    topWidgetRef = nullptr;
     
     // Initialize current values
     currentXValue = 0;

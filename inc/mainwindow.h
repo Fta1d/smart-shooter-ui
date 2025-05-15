@@ -63,8 +63,7 @@ class MainWindow : public QMainWindow {
         void connectSignalsAndSlots();
         void setupFrameViewerConnections();
 
-        // QWidget *topWidget = nullptr;
-        // QHBoxLayout *topLayout = nullptr;
+        QWidget *topWidgetRef;
 
         QPlainTextEdit *log;
         QPushButton *activeButton;
