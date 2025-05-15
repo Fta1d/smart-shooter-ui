@@ -116,7 +116,7 @@ void UdpCmdSender::prepareAndSendMessage() {
     int shotInt = shotValue ? 1 : 0;
     int activeInt = activeValue ? 1 : 0;
     
-    QString messageStr = QString("%1,%2,%3,%4,%5").arg(xValue).arg(yValue).arg(shotInt).arg(activeInt).arg(mode);
+    QString messageStr = QString("%1,%2,%3,%4").arg(xValue).arg(yValue).arg(shotInt).arg(activeInt); // .arg(mode)
     
     // Pack the message using MsgPack
     msgpack::sbuffer buffer;

@@ -39,6 +39,9 @@ void MainWindow::initMainWindow() {
     mainLayout->addWidget(bottomWidget, 1);
 
     connectSignalsAndSlots();
+
+    loadSettings();
+
     setCentralWidget(centralWidget);
     
     applyDeltaStyle();
@@ -404,8 +407,6 @@ void MainWindow::connectButtonClicked() {
         logMessage("Connecting UDP to: " + address);
         
         // Set destination and start sending
-        emit updateXValue(320);
-        emit updateYValue(320);
         emit startUdpSending(addressPortList[0], addressPortList[1].toInt());
         
         udpConnected = true;
@@ -553,6 +554,8 @@ void MainWindow::showLog() {
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
+    saveSettings();
+
     // Stop UDP sending
     if (udpConnected) {
         emit stopUdpSending();
@@ -771,6 +774,31 @@ void MainWindow::applyDeltaStyle() {
             )");
         }
     }
+}
+
+void MainWindow::loadSettings() {
+    QSettings settings("UKR SMART TECH", "smart-shooter");
+
+    int savedX = settings.value("position/x", frameWidth / 2).toInt();
+    int savedY = settings.value("position/y", frameHeight / 2).toInt();
+
+    savedX = qBound(0, savedX, frameWidth);
+    savedY = qBound(0, savedY, frameHeight);
+
+    xSlider->setValue(savedX);
+    ySlider->setValue(savedY);
+
+    updateXLineEdit();
+    updateYLineEdit();
+}
+
+void MainWindow::saveSettings() {
+    QSettings settings("UKR SMART TECH", "smart-shooter");
+
+    settings.setValue("position/x", currentXValue);
+    settings.setValue("position/y", currentYValue);
+    
+    settings.sync();
 }
 
 QPixmap MainWindow::createOutlinedTextPixmap(const QString &text, int fontSize, const QColor &textColor, 

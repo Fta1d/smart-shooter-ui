@@ -23,6 +23,7 @@
 #include <QGraphicsDropShadowEffect>
 #include <QPainter>
 #include <QPainterPath>
+#include <QSettings>
 
 #include <malloc.h>
 #include "inc/videolabel.h"
@@ -62,6 +63,8 @@ class MainWindow : public QMainWindow {
 
         void connectSignalsAndSlots();
         void setupFrameViewerConnections();
+        void saveSettings();
+        void loadSettings();
 
         QWidget *topWidgetRef;
 
