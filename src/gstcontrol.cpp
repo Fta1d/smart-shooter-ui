@@ -254,8 +254,11 @@ void GstControl::connectToStream() {
 
 
 void GstControl::stopPipeline() {
-    gst_element_set_state (pipeline, GST_STATE_NULL);
-    gst_object_unref(pipeline);
+    if (pipeline) {
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        gst_object_unref(pipeline);
+        pipeline = nullptr;
+    }
 
     if (loop && g_main_loop_is_running(loop)) {
         g_main_loop_quit(loop);
@@ -270,6 +273,8 @@ GstControl::GstControl() {
     depayloader = nullptr;
     decoder = nullptr;
     sink = nullptr;
+    loop = nullptr;
+    running = false;
 
     callback_data.main_loop = nullptr;
         

@@ -1,3 +1,6 @@
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+
 #include <QMainWindow>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -10,11 +13,23 @@
 #include <QMutexLocker>
 #include <QListWidget>
 #include <QCheckBox>
+#include <QPixmapCache>
+#include <QApplication>
+#include <QDir>
+#include <QMessageBox>
+#include <QMenu>
+#include <QClipboard>
+#include <QComboBox>
+#include <QGraphicsDropShadowEffect>
+#include <QPainter>
+#include <QPainterPath>
 
+#include <malloc.h>
 #include "inc/videolabel.h"
 
 // Forward declaration
 class UdpCmdSender;
+class LogoDetector;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -22,6 +37,7 @@ class MainWindow : public QMainWindow {
     private:
         void setupTopLayout(QWidget *parent);
         void setupBottomLayout(QWidget *parent);
+        void setupMemoryManagement();
         void applyDeltaStyle();
 
         QHBoxLayout* createXSliderLayout();
@@ -29,6 +45,9 @@ class MainWindow : public QMainWindow {
         QHBoxLayout* createStateButtonLayout();
         QHBoxLayout* createConnectionLayout();
         QHBoxLayout* createLogoLayout();
+        QVBoxLayout* createLogoDetectionLayout();
+        QHBoxLayout* createModeSelectionLayout();
+
         void initializeLogWidget();
         void initializeDesiredFramesViewWidget();
         void initializeButtons();
@@ -37,16 +56,19 @@ class MainWindow : public QMainWindow {
         void initializeLineEditX(QLineEdit *lineEdit);
         void initializeLineEditY(QLineEdit *lineEdit);
         void initializeLineEdit(QLineEdit *lineEdit);
-        void connectSignalsAndSlots();
 
-        // QWidget *topWidget = nullptr;
-        // QHBoxLayout *topLayout = nullptr;
+        QPixmap createOutlinedTextPixmap(const QString &text, int fontSize, const QColor &textColor, 
+            const QColor &outlineColor, qreal outlineWidth = 1.5);
+
+        void connectSignalsAndSlots();
+        void setupFrameViewerConnections();
+
+        QWidget *topWidgetRef;
 
         QPlainTextEdit *log;
         QPushButton *activeButton;
         QPushButton *shotButton;
         QPushButton *logButton;
-        QPushButton *saveframeButton;
         QSlider *xSlider;
         QSlider *ySlider;
         QLineEdit *xLineEdit;
@@ -55,12 +77,16 @@ class MainWindow : public QMainWindow {
         QLineEdit *addressLineEdit;
         QPushButton *connectButton;
         QListWidget *desiredFramesView;
+        QCheckBox *logoDetectionEnabled;
+        QPushButton *clearFramesButton;
+        QComboBox *modeSelectBox;
 
         bool gstRunning;
         bool udpConnected;
         
         // UdpCmdSender pointer - not owned by MainWindow
         UdpCmdSender *cmdSender;
+        LogoDetector *logoDetector;
         
         mutable QMutex log_mutex;
         mutable QMutex label_mutex;
@@ -75,6 +101,8 @@ class MainWindow : public QMainWindow {
         bool currentShotValue;
         bool currentActiveValue;
         bool isFullScreen;
+        bool isCleaningMemory;
+        bool detection;
 
     public:
         VideoLabel *label;
@@ -84,6 +112,7 @@ class MainWindow : public QMainWindow {
         
         // Set the UdpCmdSender from AppController
         void setUdpCmdSender(UdpCmdSender *sender);
+        void setLogoDetector(LogoDetector *detector);
 
     signals:
         void startGstProcess();
@@ -96,11 +125,17 @@ class MainWindow : public QMainWindow {
         void updateYValue(int value);
         void updateShotValue(bool value);
         void updateActiveValue(bool value);
+        void updateMode(int value);
+
+        void startLogoDetection();
+        void stopLogoDetection();
 
     public slots:
         void initMainWindow();
         void logMessage(const QString &message);
         void logError(const QString &errorMessage);
+
+        void autoSaveFrame();
 
     private slots:
         void updateXLineEdit();
@@ -111,11 +146,16 @@ class MainWindow : public QMainWindow {
         void shotButtonClicked();
         void connectButtonClicked();
         void showLog();
-        void saveFrame();
         void closeEvent(QCloseEvent *event);
+        void logoDetectionToggled(bool checked);
+        void clearFramesButtonClicked();
+        void enterFullscreen();
+        void exitFullscreen();
+        void onFrameItemDoubleClicked(QListWidgetItem *item);
         
 
     protected:
-        void keyPressEvent(QKeyEvent *event) override;
         bool eventFilter(QObject *watched, QEvent *event) override;
 };
+
+#endif // MAINWINDOW_H

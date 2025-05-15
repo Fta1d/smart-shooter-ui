@@ -200,8 +200,6 @@ int main(int argc, char **argv) {
 
     setStylesAndSheets(&app);
 
-    
-
     AppController appController;
     
     appController.run();

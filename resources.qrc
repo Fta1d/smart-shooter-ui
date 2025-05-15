@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>pic/logo.jpg</file>
+        <file>pic/logo25.jpg</file>
+    </qresource>
+</RCC>
