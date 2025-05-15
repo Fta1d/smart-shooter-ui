@@ -17,14 +17,34 @@ void AppController::run() {
     // Connect MainWindow signals to UdpCmdSender
     window->setUdpCmdSender(cmdSender);
     
-    // Start threads
+    // Setup LogoDetector thread
+    logoDetector->moveToThread(&logoDetectorThread);
+    connect(&logoDetectorThread, &QThread::finished, logoDetector, &QObject::deleteLater);
+    
+    // Set LogoDetector for MainWindow
+    window->setLogoDetector(logoDetector);
+    
+    // Connect frame update to logo detection
+    connect(gst, &GstControl::frameReady, this, &AppController::logoDetection, Qt::QueuedConnection);
+    
+    // Start all threads
     gstThread.start();
     cmdSenderThread.start();
+    logoDetectorThread.start();
 
     window->initMainWindow();
 }
 
+void AppController::logoDetection() {
+    QPixmap frame = gst->getFramePixmap();
+    if (!frame.isNull()) {
+        logoDetector->processFrame(frame.toImage());
+    }
+}
+
+
 AppController::AppController() {
+    logoDetector = new LogoDetector();
     gst = new GstControl();
     cmdSender = new UdpCmdSender();
     window = new MainWindow();
@@ -41,10 +61,17 @@ AppController::~AppController() {
         cmdSender->stopSending();
     }
 
+    if (logoDetector) {
+        logoDetector->stopDetection();
+    }
+
     // Stop and wait for threads
     gstThread.quit();
     gstThread.wait();
     
     cmdSenderThread.quit();
     cmdSenderThread.wait();
+
+    logoDetectorThread.quit();
+    logoDetectorThread.wait();
 }
