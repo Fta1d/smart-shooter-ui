@@ -121,8 +121,12 @@ void UdpCmdSender::prepareAndSendMessage() {
     // Pack the message using MsgPack
     msgpack::sbuffer buffer;
     msgpack::packer<msgpack::sbuffer> packer(&buffer);
-    std::string stdStr = messageStr.toStdString();
-    packer.pack(stdStr);
+
+    packer.pack_array(4);
+    packer.pack(xValue);
+    packer.pack(yValue);
+    packer.pack(shotValue);
+    packer.pack(activeValue);
     
     // Send the packed message
     qint64 bytesSent = socket->writeDatagram(
