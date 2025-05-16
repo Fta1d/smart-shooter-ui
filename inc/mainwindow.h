@@ -137,7 +137,7 @@ class MainWindow : public QMainWindow {
         void initMainWindow();
         void logMessage(const QString &message);
         void logError(const QString &errorMessage);
-
+        void updateCoordinatesFromClick(int x, int y);
         void autoSaveFrame();
 
     private slots:

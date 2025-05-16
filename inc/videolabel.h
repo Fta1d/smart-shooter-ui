@@ -2,6 +2,8 @@
 #define VIDEOLABEL_H
 
 #include <QLabel>
+#include <QPoint>
+#include <QMouseEvent>
 
 class GstControl;
 
@@ -11,8 +13,14 @@ class VideoLabel : public QWidget {
     public slots:
         void updateFrame();
 
+    signals:
+        void videoLabelClicked(int x, int y);
+
     private:
         GstControl *gstreamer;
+
+    protected:
+        bool eventFilter(QObject *watched, QEvent *event) override;
 
     public:
         QLabel *vidStreamLabel;

@@ -322,6 +322,8 @@ void MainWindow::connectSignalsAndSlots() {
         QVariant data = modeSelectBox->currentData();
         emit updateMode(data.toInt());
     });
+
+    connect(label, &VideoLabel::videoLabelClicked, this, &MainWindow::updateCoordinatesFromClick);
 }
 
 void MainWindow::setUdpCmdSender(UdpCmdSender *sender) {
@@ -544,6 +546,19 @@ void MainWindow::autoSaveFrame() {
     }
 }
 
+void MainWindow::updateCoordinatesFromClick(int x, int y) {
+    currentXValue = x;
+    currentYValue = y;
+
+    xSlider->setValue(x);
+    ySlider->setValue(y);
+
+    emit updateXValue(x);
+    emit updateYValue(y);
+
+    logMessage(QString("Coordinates updated from click: X=%1, Y=%2").arg(x).arg(y));
+}
+
 void MainWindow::showLog() {
     if (!log->isVisible()) {
         log->resize(400, 400);
@@ -582,7 +597,11 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         
-        if (keyEvent->key() == Qt::Key_F) {
+
+        QString keyText = keyEvent->text().toUpper();
+        bool isFKeyPressed = (keyText == "F" || keyText == "А");
+
+        if (isFKeyPressed) {
             if (isFullScreen) {
                 exitFullscreen();
             } else {
