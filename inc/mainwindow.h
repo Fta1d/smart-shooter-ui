@@ -48,7 +48,8 @@ class MainWindow : public QMainWindow {
         QHBoxLayout* createLogoLayout();
         QVBoxLayout* createLogoDetectionLayout();
         QHBoxLayout* createModeSelectionLayout();
-
+        QHBoxLayout* createShotdownButtonLayout();
+ 
         void initializeLogWidget();
         void initializeDesiredFramesViewWidget();
         void initializeButtons();
@@ -83,6 +84,7 @@ class MainWindow : public QMainWindow {
         QCheckBox *logoDetectionEnabled;
         QPushButton *clearFramesButton;
         QComboBox *modeSelectBox;
+        QPushButton *shotdownButton;
 
         bool gstRunning;
         bool udpConnected;
@@ -106,6 +108,7 @@ class MainWindow : public QMainWindow {
         bool isFullScreen;
         bool isCleaningMemory;
         bool detection;
+        bool shutdown;
 
     public:
         VideoLabel *label;
@@ -129,6 +132,7 @@ class MainWindow : public QMainWindow {
         void updateShotValue(bool value);
         void updateActiveValue(bool value);
         void updateMode(int value);
+        void updateShutdownValue(bool value);
 
         void startLogoDetection();
         void stopLogoDetection();
@@ -152,6 +156,7 @@ class MainWindow : public QMainWindow {
         void closeEvent(QCloseEvent *event);
         void logoDetectionToggled(bool checked);
         void clearFramesButtonClicked();
+        void shutdownButtonClicked();
         void enterFullscreen();
         void exitFullscreen();
         void onFrameItemDoubleClicked(QListWidgetItem *item);

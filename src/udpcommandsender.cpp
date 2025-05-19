@@ -21,6 +21,7 @@ UdpCmdSender::UdpCmdSender(QObject *parent) : QObject(parent) {
     shotValue = false;
     activeValue = false;
     mode = 1;
+    shutdownValue = false;
 }
 
 UdpCmdSender::~UdpCmdSender() {
@@ -70,6 +71,11 @@ void UdpCmdSender::setMode(int value) {
     mode = value;
 }
 
+void UdpCmdSender::setShutdownValue(bool value) {
+    QMutexLocker locker(&dataMutex);
+    shutdownValue = value;
+}
+
 int UdpCmdSender::getXValue() const {
     QMutexLocker locker(&dataMutex);
     return xValue;
@@ -116,7 +122,7 @@ void UdpCmdSender::prepareAndSendMessage() {
     int shotInt = shotValue ? 1 : 0;
     int activeInt = activeValue ? 1 : 0;
     
-    QString messageStr = QString("%1,%2,%3,%4").arg(xValue).arg(yValue).arg(shotInt).arg(activeInt); // .arg(mode)
+    QString messageStr = QString("%1,%2,%3,%4,%5").arg(xValue).arg(yValue).arg(shotInt).arg(activeInt).arg(shutdownValue); // .arg(mode)
     
     // Pack the message using MsgPack
     msgpack::sbuffer buffer;

@@ -68,6 +68,7 @@ void MainWindow::setupTopLayout(QWidget *parent) {
     verticalRight->addLayout(createLogoLayout());
     verticalRight->addStretch();
     verticalRight->addLayout(createConnectionLayout());
+    verticalRight->addLayout(createShotdownButtonLayout());
     
     topLayout->addLayout(verticalRight, 1);
 }
@@ -136,6 +137,17 @@ QHBoxLayout* MainWindow::createStateButtonLayout() {
     stateButtonLayout->addWidget(shotButton);
 
     return stateButtonLayout;
+}
+QHBoxLayout* MainWindow::createShotdownButtonLayout() {
+    QHBoxLayout *shotdownButtonLayout = new QHBoxLayout();
+
+    shotdownButton = new QPushButton("Shutdown");
+
+    shotdownButton->setCheckable(false);
+
+    shotdownButtonLayout->addWidget(shotdownButton);
+
+    return shotdownButtonLayout;
 }
 
 QHBoxLayout* MainWindow::createConnectionLayout() {
@@ -301,6 +313,8 @@ void MainWindow::connectSignalsAndSlots() {
     connect(shotButton, &QPushButton::clicked, this, &MainWindow::shotButtonClicked);
     connect(connectButton, &QPushButton::clicked, this, &MainWindow::connectButtonClicked);
     connect(logButton, &QPushButton::clicked, this, &MainWindow::showLog);
+    connect(clearFramesButton, &QPushButton::clicked, this, &MainWindow::clearFramesButtonClicked);
+    connect(shotdownButton, &QPushButton::clicked, this, &MainWindow::shutdownButtonClicked);
 
     // Connect signal values to cache them locally
     connect(xSlider, &QSlider::valueChanged, [this](int value) {
@@ -314,7 +328,6 @@ void MainWindow::connectSignalsAndSlots() {
     });
 
     connect(logoDetectionEnabled, &QCheckBox::toggled, this, &MainWindow::logoDetectionToggled);
-    connect(clearFramesButton, &QPushButton::clicked, this, &MainWindow::clearFramesButtonClicked);
 
     connect(desiredFramesView, &QListWidget::itemDoubleClicked, this, &MainWindow::onFrameItemDoubleClicked);
 
@@ -341,6 +354,7 @@ void MainWindow::setUdpCmdSender(UdpCmdSender *sender) {
     connect(this, &MainWindow::updateShotValue, cmdSender, &UdpCmdSender::setShotValue, Qt::QueuedConnection);
     connect(this, &MainWindow::updateActiveValue, cmdSender, &UdpCmdSender::setActiveValue, Qt::QueuedConnection);
     connect(this, &MainWindow::updateMode, cmdSender, &UdpCmdSender::setMode, Qt::QueuedConnection);
+    connect(this, &MainWindow::updateShutdownValue, cmdSender, &UdpCmdSender::setShutdownValue, Qt::QueuedConnection);
 }
 
 void MainWindow::setLogoDetector(LogoDetector *detector) {
@@ -367,6 +381,19 @@ void MainWindow::updateYLineEdit() {
 
 void MainWindow::updateYSlider() {
     ySlider->setValue(yLineEdit->text().toInt());
+}
+
+void MainWindow::shutdownButtonClicked() {
+    if (!shutdown) {
+        emit updateShutdownValue(!shutdown);
+    }
+
+    shutdown = true;
+
+    QTimer::singleShot(300, [this]() {
+        shutdown = false;
+        emit updateShutdownValue(shutdown);
+    });
 }
 
 void MainWindow::stateButtonClicked(bool checked) {
@@ -396,11 +423,10 @@ void MainWindow::shotButtonClicked() {
 }
 
 void MainWindow::connectButtonClicked() {
-    // QMutexLocker locker(&log_mutex);
     QString address = addressLineEdit->text();
     QStringList addressPortList = address.split(':');
 
-    if (!address.isEmpty()) {
+    if (!address.isEmpty() && !(addressPortList.length() < 2)) {
         if (udpConnected) {
             logMessage("UDP already connected!");
             return;
@@ -409,7 +435,7 @@ void MainWindow::connectButtonClicked() {
         logMessage("Connecting UDP to: " + address);
         
         // Set destination and start sending
-        emit startUdpSending(addressPortList[0], addressPortList[1].toInt());
+        emit startUdpSending(addressPortList[0], addressPortList[1].toInt() ? addressPortList[1].toInt() : 5050);
         
         udpConnected = true;
         
@@ -420,7 +446,7 @@ void MainWindow::connectButtonClicked() {
             emit startGstProcess();
         }
     } else {
-        logMessage("Error: Address field is empty");
+        logMessage("Error: Invalid address!");
     }
 }
 
@@ -751,6 +777,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     isFullScreen = false;
     isCleaningMemory = false;
     detection = false;
+    shutdown = false;
 
     resize(1160, 1000);
     label = new VideoLabel();
@@ -801,11 +828,15 @@ void MainWindow::loadSettings() {
     int savedX = settings.value("position/x", frameWidth / 2).toInt();
     int savedY = settings.value("position/y", frameHeight / 2).toInt();
 
+    QString prevAddress = settings.value("address", "127.0.0.1:5050").toString();
+
     savedX = qBound(0, savedX, frameWidth);
     savedY = qBound(0, savedY, frameHeight);
 
     currentXValue = savedX;
     currentYValue = savedY;
+
+    addressLineEdit->setText(prevAddress);
 
     xSlider->setValue(savedX);
     ySlider->setValue(savedY);
@@ -822,6 +853,8 @@ void MainWindow::saveSettings() {
 
     settings.setValue("position/x", currentXValue);
     settings.setValue("position/y", currentYValue);
+
+    settings.setValue("address", addressLineEdit->text());
     
     settings.sync();
 }

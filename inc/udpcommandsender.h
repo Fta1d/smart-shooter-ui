@@ -23,6 +23,7 @@ private:
     bool shotValue;
     bool activeValue;
     int mode;
+    bool shutdownValue;
     
     void prepareAndSendMessage();
     
@@ -38,6 +39,7 @@ public:
     void setShotValue(bool value);
     void setActiveValue(bool value);
     void setMode(int value);
+    void setShutdownValue(bool value);
     
     // Getters for command values
     int getXValue() const;
