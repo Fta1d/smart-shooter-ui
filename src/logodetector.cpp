@@ -2,7 +2,7 @@
 
 LogoDetector::LogoDetector(QObject *parent) : QObject(parent) {
     running = false;
-    threshold = 0.85;   
+    threshold = 0.7;   
     logoSize = 25;       
     checkFrequency = 1;  
 
@@ -129,6 +129,7 @@ void LogoDetector::processFrame(const QImage &frame) {
     cv::Point minLoc, maxLoc;
     cv::minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc);
 
+    // qDebug() << "Resulted val: " << maxVal;
     if (maxVal >= threshold) {
         emit logoDetected();
     }

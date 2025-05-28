@@ -213,6 +213,7 @@ QHBoxLayout* MainWindow::createYSliderLayout() {
 void MainWindow::initializeLogWidget() {
     log = new QPlainTextEdit();
     log->setReadOnly(true);
+    log->setMaximumBlockCount(200);
     log->setPlaceholderText("Event log...");
     log->setWindowFlag(Qt::Window);
 }
